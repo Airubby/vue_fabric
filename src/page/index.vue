@@ -45,7 +45,7 @@ import DialogZtMapAdd from '../components/dialogZtMapAdd.vue'
 
 export default {
     created () {
-        if(JSON.stringify(localStorage.loginInfo) == undefined){
+        if(JSON.stringify(sessionStorage.loginInfo) == undefined){
             this.$message({
                 message: "请登录",
                 type: 'warning'
@@ -54,12 +54,6 @@ export default {
             return;
         }
         var obj = this.$route.query;
-        console.log(obj);
-        if(JSON.stringify(obj) == "{}"){
-            this.mapIndex=0;
-        }else{
-            this.mapIndex=obj.index;
-        }
 
     },
     mounted() {

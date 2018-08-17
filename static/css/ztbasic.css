@@ -307,3 +307,8 @@
 .device_detail_con .el-form-item__content{
     line-height: 40px !important;
 }
+
+.canvasbox{
+    width: 100%;
+    height: 100%;
+}

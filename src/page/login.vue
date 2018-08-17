@@ -122,7 +122,6 @@ export default {
  data(){
   
   	return {
-          loginFlag:false,
         user:{
             userid:"",
             psword:""
@@ -187,16 +186,6 @@ export default {
       }
     },
     watch:{
-        loginFlag: {
-            handler: function(val) {
-                if(this.$store.state.navList.length>0){
-                    this.$router.push({path:this.$store.state.navList[0].url});
-                }else{
-                    this.$message.warning("你没有一个菜单权限！");
-                }
-            },
-            deep: true
-        },
     },
 }
 </script>
