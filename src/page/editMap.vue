@@ -31,7 +31,7 @@
                             <el-collapse-item title="自定义图形" name="second">
                                 <div class="loncom_zt_sidebarcon loncom_zt_item">
                                     <span v-for="item in secondList">
-                                        <img :src="item.img" :data-type="item.type" draggable="true" @dragstart="drag($event)">
+                                        <img :src="item.img" :data-type="item.type" draggable="true" @dragstart="drag($event)" @click="clickImg($event)">
                                     </span>
                                 </div>
                             </el-collapse-item>
@@ -152,25 +152,42 @@ export default {
       //是否拖动
        var panning = false;
       //鼠标按下
-        _this.canvas.on('mouse:down', function (e) {
+        _this.canvas.on('mouse:down', function (options) {
+            console.log(options)
+            _this.mouseDown.x=options.e.offsetX;
+            _this.mouseDown.y=options.e.offsetY;
+            if(_this.drawing){
+                _this.startDrawing=true;
+            }
             //按住alt键才可拖动画布
-            if(e.e.altKey) {
+            if(options.e.altKey) {
                 panning = true;
                 _this.canvas.selection = false;
             }
         });
 
         //鼠标抬起
-        _this.canvas.on('mouse:up', function (e) {
+        _this.canvas.on('mouse:up', function (options) {
+            _this.mouseTo.x=options.e.offsetX;
+            _this.mouseTo.y=options.e.offsetY;
             panning = false;
             _this.canvas.selection = true;
+            _this.startDrawing=false;
+            if(_this.drawing){
+                _this.drawGraph();
+            }
         });
 
         //鼠标移动
-        _this.canvas.on('mouse:move', function (e) {
-            if (panning && e && e.e) {
-                var delta = new fabric.Point(e.e.movementX, e.e.movementY);
+        _this.canvas.on('mouse:move', function (options) {
+            if (panning && options && options.e) {
+                var delta = new fabric.Point(options.e.movementX, options.e.movementY);
                 _this.canvas.relativePan(delta);
+            }
+            if(_this.drawing&&_this.startDrawing){
+                _this.mouseTo.x=options.e.offsetX;
+                _this.mouseTo.y=options.e.offsetY;
+                _this.drawLine()
             }
         });
 
@@ -200,6 +217,7 @@ export default {
         });
          //右键点击事件响应
         function onContextmenu(event) {
+            console.log(12313123)
             var pointer = _this.canvas.getPointer(event.originalEvent);
             var objects = _this.canvas.getObjects();
             for (var i = objects.length - 1; i >= 0; i--) {
@@ -222,6 +240,8 @@ export default {
             //定义右键菜单项
             _this.contextMenuItems = {
                 "delete": {name: "删除", icon: "delete", data: object},
+                "sure": {name: "确定", icon: "delete", data: object},
+                "point": {name: "顶点位置调整", icon: "delete", data: object},
             };
             //右键菜单显示位置
             var position = {
@@ -232,10 +252,16 @@ export default {
         }
         //右键菜单项点击
         function contextMenuClick(key, options) {
-            if(key == "delete") {
-            //得到对应的object并删除
+            //得到对应的object
             var object = _this.contextMenuItems[key].data;
+            if(key == "delete") {
                 _this.canvas.remove(object);
+            }else if(key=="sure"){
+                _this.drawing=false;
+                _this.startDrawing=false;
+                _this.drawLinePoint=[];
+            }else if(key=="point"){
+                console.log(object)
             }
         }
 
@@ -300,7 +326,14 @@ export default {
                 }
             ],
             contextMenuItems:'', //存储右键的菜单项
-           
+            mouseDown:{}, //canvas上的鼠标按下的offsetx,offsety
+            mouseTo:{},
+            drawing:false,  //是否可以自定义绘制
+            startDrawing:false,  //开始自定义绘制
+            drawObj:'',  //自定义绘制的对象
+            lineObj:'',  //自定义绘制的线
+            drawLinePoint:[],  //自定义绘制的对象point
+            
 
        }
    },
@@ -395,16 +428,64 @@ export default {
                         });
                         break;
                     case 'Line':
-                        pic=new fabric.Line([ev.clientX, ev.clientY, mouseTo.x, mouseTo.y],{
-                            strokeWidth:2, fill: '#f00'
-                        });
+                        
                         break;
                     default:
                         break;
                 }
                 this.canvas.add(pic);
             }
-            console.log(type)
+        },
+        //绘图
+        drawGraph:function(type){
+            var _this=this;
+            if(this.drawObj){
+                this.canvas.remove(this.drawObj);
+            }
+            if(this.lineObj){
+                this.canvas.remove(this.lineObj);
+            }
+            if(this.drawLinePoint.length==0){
+                this.drawLinePoint.push({x:_this.mouseDown.x,y:_this.mouseDown.y},{x:_this.mouseTo.x,y:_this.mouseTo.y});
+            }else{
+                this.drawLinePoint.push({x:_this.mouseTo.x,y:_this.mouseTo.y});
+            }
+            // var line=new fabric.Line(this.drawLinePoint,{
+            //     strokeWidth:2, fill: '#f00',stroke: '#5E2300',//笔触颜色
+            // });
+            // this.canvas.add(line);
+            // this.drawObj=line;
+            var string='';
+            for(var i=0;i<this.drawLinePoint.length;i++){
+                if(i==0){
+                    string+='M '+this.drawLinePoint[i].x+' '+this.drawLinePoint[i].y+' ';
+                }else if(i==this.drawLinePoint.length-1){
+                    string+='L '+this.drawLinePoint[i].x+' '+this.drawLinePoint[i].y+' z';
+                }else{
+                    string+='L '+this.drawLinePoint[i].x+' '+this.drawLinePoint[i].y+' ';
+                }
+            }
+            var path = new fabric.Path(string);
+            path.set({fill:'',stroke:'#5E2300' });
+            this.canvas.add(path);
+            this.drawObj=path;
+            
+        },
+        drawLine:function(){
+            var _this=this;
+            if(this.lineObj){
+                this.canvas.remove(this.lineObj);
+            }
+            var pic=new fabric.Line([_this.mouseDown.x, _this.mouseDown.y, _this.mouseTo.x, _this.mouseTo.y],{
+                strokeWidth:2, fill: '#f00',stroke: '#5E2300',//笔触颜色
+            });
+            this.canvas.add(pic);
+            this.lineObj=pic;
+        },
+        //
+        clickImg:function(event){
+            console.log($(event.target).data("type"))
+            this.drawing=true;
         },
         //确认修改
         onSubmit:function(){
@@ -448,7 +529,16 @@ export default {
         
         
     },
-    
+    watch:{
+        drawLinePoint:function(val){
+            // for(var i=0;i<val.length-1;i++){
+            //     var pic=new fabric.Line([val[i].x, val[i].y, val[i+1].x, val[i+1].y],{
+            //         strokeWidth:2, fill: '#f00',stroke: '#5E2300',//笔触颜色
+            //     });
+            //     this.canvas.add(pic);
+            // }
+        },
+    },
     components:{}
 }
 </script>
