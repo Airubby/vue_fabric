@@ -106,7 +106,6 @@ export default {
         _this.canvas.setHeight($(".canvasbox").height());
         //窗口尺寸改变响应（修改canvas大小）
         function resizeCanvas() {   
-            console.log(1)
             _this.canvas.setWidth($(".canvasbox").width());
             _this.canvas.setHeight($(".canvasbox").height());
             //缩放移动视图，使其适应Canvas大小
@@ -153,7 +152,6 @@ export default {
        var panning = false;
       //鼠标按下
         _this.canvas.on('mouse:down', function (options) {
-            console.log(options)
             _this.mouseDown.x=options.e.offsetX;
             _this.mouseDown.y=options.e.offsetY;
             if(_this.drawing){
@@ -164,6 +162,13 @@ export default {
                 panning = true;
                 _this.canvas.selection = false;
             }
+            //如果是按下point
+            if(options.target&&options.target.pointEdit){
+                _this.thePointObj=options.target;
+                _this.canvas.bringForward(options.target)
+            }
+
+
         });
 
         //鼠标抬起
@@ -176,9 +181,14 @@ export default {
             if(_this.drawing){
                 _this.drawGraph();
             }
+            //如果是按下point抬起
+            if(options.target&&options.target.pointEdit){
+                _this.thePointObj="";
+            }
+
         });
 
-        //鼠标移动
+        //鼠标移动按住alt拖动画布
         _this.canvas.on('mouse:move', function (options) {
             if (panning && options && options.e) {
                 var delta = new fabric.Point(options.e.movementX, options.e.movementY);
@@ -190,15 +200,22 @@ export default {
                 _this.drawLine()
             }
         });
+        //拖动对象移动
+        _this.canvas.on('object:moving',function(options){
+            console.log(options)
+            if(options.target.pointEdit){  //pointEdit自定义的字段，
+                //_this.thePointObj=options.target;
+            }
+        });
 
         //鼠标滚轮监听
         $(".upper-canvas").mousewheel(function(event) {
-            console.log(event)
-            var zoom = (event.deltaY > 0 ? 0.1 : -0.1) + _this.canvas.getZoom();
-            zoom = Math.max(0.1,zoom); //最小为原来的1/10
-            zoom = Math.min(3,zoom); //最大是原来的3倍
-            var zoomPoint = new fabric.Point(event.pageX, event.pageY);
-            _this.canvas.zoomToPoint(zoomPoint, zoom);
+            // console.log(event)
+            // var zoom = (event.deltaY > 0 ? 0.1 : -0.1) + _this.canvas.getZoom();
+            // zoom = Math.max(0.1,zoom); //最小为原来的1/10
+            // zoom = Math.min(3,zoom); //最大是原来的3倍
+            // var zoomPoint = new fabric.Point(event.pageX, event.pageY);
+            // _this.canvas.zoomToPoint(zoomPoint, zoom);
         });
         //在canvas上层对象上添加右键事件监听
         $(".upper-canvas").contextmenu(onContextmenu);
@@ -208,7 +225,6 @@ export default {
           trigger: 'none',
           build: function($trigger, e) {
               //构建菜单项build方法在每次右键点击会执行
-              console.log(_this.contextMenuItems)
               return {
                   callback: contextMenuClick,
                   items: _this.contextMenuItems
@@ -217,7 +233,6 @@ export default {
         });
          //右键点击事件响应
         function onContextmenu(event) {
-            console.log(12313123)
             var pointer = _this.canvas.getPointer(event.originalEvent);
             var objects = _this.canvas.getObjects();
             for (var i = objects.length - 1; i >= 0; i--) {
@@ -254,29 +269,21 @@ export default {
         function contextMenuClick(key, options) {
             //得到对应的object
             var object = _this.contextMenuItems[key].data;
+
             if(key == "delete") {
                 _this.canvas.remove(object);
             }else if(key=="sure"){
                 _this.drawing=false;
                 _this.startDrawing=false;
-                _this.drawLinePoint=[];
+                // object.selectable=object.hasBorders = object.hasControls = true;
+                _this.drawGraph('sure');
             }else if(key=="point"){
-                console.log(object)
+                //_this.canvas.selectable=false;
+                _this.drawing=false;
+                _this.startDrawing=false;
+                _this.drawPoint(object);
             }
         }
-
-
-    //  var rect = new fabric.Rect({
-    //         left:500,//距离画布左侧的距离，单位是像素
-    //         top:500,//距离画布上边的距离
-    //         fill:'red',//填充的颜色
-    //         width:30,//方形的宽度
-    //         height:30//方形的高度
-    //     })
-    //     console.log(rect)
-    //     _this.canvas.add(rect);
-    //     _this.canvas.renderAll();
-
     },
     data() {
        return {
@@ -308,7 +315,7 @@ export default {
                     json:{
                         width: 50, height: 50, left: 50, top: 50,
                         fill: 'rgba(255,0,0,0.5)'
-                    }
+                    },
                 },{
                     title:'圆形',
                     type:'circle',
@@ -323,6 +330,13 @@ export default {
                     json:{
                         width: 100, height: 100, left: 50, top: 50, fill: '#cca'
                     }
+                },{
+                    title:'直线',
+                    type:'line',
+                    img:'static/images/login_user.png',
+                    json:{
+                        width: 100, height: 4, left: 50, top: 50, fill: '#cca'
+                    }
                 }
             ],
             contextMenuItems:'', //存储右键的菜单项
@@ -333,6 +347,11 @@ export default {
             drawObj:'',  //自定义绘制的对象
             lineObj:'',  //自定义绘制的线
             drawLinePoint:[],  //自定义绘制的对象point
+            drawPointObj:[],  //编辑顶点时候的顶点对象,删除也要用的
+            _drawPointObj:[],  //原始的顶点对象，过渡时的顶点对象
+            thePointObj:'',  //当前移动的point，
+            pointEditNum:0,  //减少移动point时执行次数的计数
+
             
 
        }
@@ -363,6 +382,7 @@ export default {
                 $(this.$refs.navbtn).removeClass("fa-chevron-right");
                 this.navbtn='open';
             }
+            //fabric.Object.prototype.originX='center';
         },
         //全屏
         fullScreen:function(){
@@ -427,8 +447,12 @@ export default {
                             width: 80, height: 80, left: left, top: top, fill: '#f00'
                         });
                         break;
-                    case 'Line':
-                        
+                    case 'line':
+                        pic=new fabric.Line([left,top,left+100,top],{
+                            fill: '#5E2300',
+                            stroke: '#5E2300',
+                            strokeWidth: 2,
+                        })
                         break;
                     default:
                         break;
@@ -436,25 +460,25 @@ export default {
                 this.canvas.add(pic);
             }
         },
+        drawLineGraph:function(){
+            
+        },
         //绘图
-        drawGraph:function(type){
+        drawGraph:function(flag){
             var _this=this;
+            if(!flag){
+                if(this.drawLinePoint.length==0){
+                    this.drawLinePoint.push({x:_this.mouseDown.x,y:_this.mouseDown.y},{x:_this.mouseTo.x,y:_this.mouseTo.y});
+                }else{
+                    this.drawLinePoint.push({x:_this.mouseTo.x,y:_this.mouseTo.y});
+                }
+            }
             if(this.drawObj){
                 this.canvas.remove(this.drawObj);
             }
             if(this.lineObj){
                 this.canvas.remove(this.lineObj);
             }
-            if(this.drawLinePoint.length==0){
-                this.drawLinePoint.push({x:_this.mouseDown.x,y:_this.mouseDown.y},{x:_this.mouseTo.x,y:_this.mouseTo.y});
-            }else{
-                this.drawLinePoint.push({x:_this.mouseTo.x,y:_this.mouseTo.y});
-            }
-            // var line=new fabric.Line(this.drawLinePoint,{
-            //     strokeWidth:2, fill: '#f00',stroke: '#5E2300',//笔触颜色
-            // });
-            // this.canvas.add(line);
-            // this.drawObj=line;
             var string='';
             for(var i=0;i<this.drawLinePoint.length;i++){
                 if(i==0){
@@ -468,7 +492,15 @@ export default {
             var path = new fabric.Path(string);
             path.set({fill:'',stroke:'#5E2300' });
             this.canvas.add(path);
-            this.drawObj=path;
+            if(flag=="sure"){  //画完确定保存了
+                this.drawLinePoint=[];
+                for(var i=0;i<this.drawPointObj.length;i++){
+                    this.canvas.remove(this.drawPointObj[i]);
+                }
+            }else{
+                path.selectable=path.hasBorders = path.hasControls = false;
+                this.drawObj=path;
+            }
             
         },
         drawLine:function(){
@@ -482,7 +514,35 @@ export default {
             this.canvas.add(pic);
             this.lineObj=pic;
         },
-        //
+        //绘制顶点
+        drawPoint:function(object){
+            var _this=this;
+            this.drawLinePoint=[];
+            this.drawPointObj=[];
+            this._drawPointObj=[];
+            this.drawObj=object;
+            object.selectable=object.hasBorders = object.hasControls = false;
+            _this.canvas.sendBackwards(object)
+            if(object.path){
+                for(var i=0;i<object.path.length-1;i++){
+                    this.drawLinePoint.push({x:object.path[i][1],y:object.path[i][2]})
+                    var point = new fabric.Circle({
+                        left: object.path[i][1]-5,
+                        top: object.path[i][2]-5,
+                        strokeWidth: 2,
+                        radius: 5,
+                        fill: '#fff',
+                        stroke: '#666'
+                    });
+                    point.hasControls = point.hasBorders = false;
+                    point.pointEdit=true;
+                    point.pointIndex=i;
+                    _this.canvas.add(point)
+                    _this.drawPointObj.push(point);
+                    _this._drawPointObj.push(Object.assign({}, point));
+                }
+            }
+        },
         clickImg:function(event){
             console.log($(event.target).data("type"))
             this.drawing=true;
@@ -520,7 +580,10 @@ export default {
         },
         //撤销
         backout:function(){
-            
+            console.log(this.drawPointObj)
+            for(var i=0;i<this.drawPointObj.length;i++){
+                this.canvas.remove(this.drawPointObj[i]);
+            }
         },
         //反撤销
         returnBackout:function(){
@@ -530,13 +593,27 @@ export default {
         
     },
     watch:{
-        drawLinePoint:function(val){
-            // for(var i=0;i<val.length-1;i++){
-            //     var pic=new fabric.Line([val[i].x, val[i].y, val[i+1].x, val[i+1].y],{
-            //         strokeWidth:2, fill: '#f00',stroke: '#5E2300',//笔触颜色
-            //     });
-            //     this.canvas.add(pic);
-            // }
+        thePointObj:{
+            handler:function(val,oldval){
+                if(this.thePointObj){
+                    this.pointEditNum++;
+                    if(this.pointEditNum==3){
+                        this.pointEditNum=0;
+                         console.log(val)
+                         console.log(this._drawPointObj)
+                         console.log(this.drawPointObj)
+                        var offsetX=val.left-this._drawPointObj[val.pointIndex].left;
+                        var offsetY=val.top-this._drawPointObj[val.pointIndex].top;
+                        var newValue={};
+                        newValue.x=this.drawLinePoint[val.pointIndex].x+offsetX;
+                        newValue.y=this.drawLinePoint[val.pointIndex].y+offsetY;
+                        this.drawLinePoint.splice(val.pointIndex, 1, newValue);
+                        this._drawPointObj.splice(val.pointIndex,1,Object.assign({}, val))
+                        this.drawGraph('edit');
+                    }
+                }
+            },
+            deep: true
         },
     },
     components:{}
