@@ -167,6 +167,11 @@ export default {
                 _this.thePointObj=options.target;
                 _this.canvas.bringForward(options.target)
             }
+            //如果按下是自定义对象
+            if(options.target&&options.target.custom){
+                _this.customObj=options.target;
+                _this._customObj=Object.assign({}, options.target)
+            }
 
 
         });
@@ -185,6 +190,12 @@ export default {
             if(options.target&&options.target.pointEdit){
                 _this.thePointObj="";
             }
+            //如果按下是自定义对象
+            if(options.target&&options.target.custom){
+                _this.customObj="";
+                _this._customObj="";
+            }
+
 
         });
 
@@ -269,16 +280,13 @@ export default {
         function contextMenuClick(key, options) {
             //得到对应的object
             var object = _this.contextMenuItems[key].data;
-
             if(key == "delete") {
                 _this.canvas.remove(object);
             }else if(key=="sure"){
                 _this.drawing=false;
                 _this.startDrawing=false;
-                // object.selectable=object.hasBorders = object.hasControls = true;
                 _this.drawGraph('sure');
             }else if(key=="point"){
-                //_this.canvas.selectable=false;
                 _this.drawing=false;
                 _this.startDrawing=false;
                 _this.drawPoint(object);
@@ -346,11 +354,14 @@ export default {
             startDrawing:false,  //开始自定义绘制
             drawObj:'',  //自定义绘制的对象
             lineObj:'',  //自定义绘制的线
+            pointSize:7,  //point的大小
             drawLinePoint:[],  //自定义绘制的对象point
             drawPointObj:[],  //编辑顶点时候的顶点对象,删除也要用的
             _drawPointObj:[],  //原始的顶点对象，过渡时的顶点对象
             thePointObj:'',  //当前移动的point，
             pointEditNum:0,  //减少移动point时执行次数的计数
+            customObj:'',  //当前自定义对象
+            _customObj:'', //当前自定义对象，过渡用的
 
             
 
@@ -491,6 +502,7 @@ export default {
             }
             var path = new fabric.Path(string);
             path.set({fill:'',stroke:'#5E2300' });
+            path.custom=true;
             this.canvas.add(path);
             if(flag=="sure"){  //画完确定保存了
                 this.drawLinePoint=[];
@@ -527,10 +539,10 @@ export default {
                 for(var i=0;i<object.path.length-1;i++){
                     this.drawLinePoint.push({x:object.path[i][1],y:object.path[i][2]})
                     var point = new fabric.Circle({
-                        left: object.path[i][1]-5,
-                        top: object.path[i][2]-5,
+                        left: object.path[i][1]-_this.pointSize,
+                        top: object.path[i][2]-_this.pointSize,
                         strokeWidth: 2,
-                        radius: 5,
+                        radius: _this.pointSize,
                         fill: '#fff',
                         stroke: '#666'
                     });
@@ -593,15 +605,13 @@ export default {
         
     },
     watch:{
+        //顶点监听
         thePointObj:{
             handler:function(val,oldval){
                 if(this.thePointObj){
                     this.pointEditNum++;
                     if(this.pointEditNum==3){
                         this.pointEditNum=0;
-                         console.log(val)
-                         console.log(this._drawPointObj)
-                         console.log(this.drawPointObj)
                         var offsetX=val.left-this._drawPointObj[val.pointIndex].left;
                         var offsetY=val.top-this._drawPointObj[val.pointIndex].top;
                         var newValue={};
@@ -610,6 +620,32 @@ export default {
                         this.drawLinePoint.splice(val.pointIndex, 1, newValue);
                         this._drawPointObj.splice(val.pointIndex,1,Object.assign({}, val))
                         this.drawGraph('edit');
+                    }
+                }
+            },
+            deep: true
+        },
+        //自定义对象监听
+        customObj:{
+            handler:function(val,oldval){
+                if(this.customObj){
+                    this.pointEditNum++;
+                    if(this.pointEditNum==3){
+                        this.pointEditNum=0;
+                        console.log(this.customObj)
+                        console.log(this._customObj)
+                        var offsetX=val.left-this._customObj.left;
+                        var offsetY=val.top-this._customObj.top;
+                        for(var i=0;i<val.path.length-1;i++){
+                            for(var j=1;j<val.path[i].length;j++){
+                                if(j==1){
+                                    val.path[i].splice(j,1,val.path[i][j]+offsetX);
+                                }else if(j==2){
+                                    val.path[i].splice(j,1,val.path[i][j]+offsetY);
+                                }
+                            }
+                        }
+                        this._customObj=Object.assign({}, val);
                     }
                 }
             },
