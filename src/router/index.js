@@ -8,6 +8,12 @@ export const syncRouter=[
         meta: { title: 'home'},
         component: () => import('@/views/Index.vue'),
     },
+    {
+        path: '/test',
+        name: 'test',
+        meta: { title: 'test'},
+        component: () => import('@/views/Test.vue'),
+    },
     { path: '*', component: () => import('@/views/errorPage/Loading') }, //这个不要给meta的键值对
 ];
 

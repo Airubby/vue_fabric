@@ -33,7 +33,80 @@ export default {
 
     },
     mounted() {
-        this.init()
+        let _this=this;
+        this.init();
+        //是否拖动
+        var panning = false;
+        //鼠标按下
+        _this.canvas.on('mouse:down', function (options) {
+            _this.mouseDown.x=options.e.offsetX;
+            _this.mouseDown.y=options.e.offsetY;
+            if(_this.drawing){
+                _this.startDrawing=true;
+            }
+            //按住alt键才可拖动画布
+            if(options.e.altKey) {
+                panning = true;
+                _this.canvas.selection = false;
+            }
+            //如果是按下point
+            if(options.target&&options.target.pointEdit){
+                _this.thePointObj=options.target;
+                _this.canvas.bringForward(options.target)
+            }
+            //如果按下是自定义对象
+            if(options.target&&options.target.custom){
+                _this.customObj=options.target;
+                _this._customObj=Object.assign({}, options.target)
+            }
+
+
+        });
+
+        //鼠标抬起
+        _this.canvas.on('mouse:up', function (options) {
+            _this.mouseTo.x=options.e.offsetX;
+            _this.mouseTo.y=options.e.offsetY;
+            panning = false;
+            _this.canvas.selection = true;
+            _this.startDrawing=false;
+            if(_this.drawing){
+                _this.drawGraph();
+            }
+            //如果是按下point抬起
+            if(options.target&&options.target.pointEdit){
+                _this.thePointObj="";
+            }
+            //如果按下是自定义对象
+            if(options.target&&options.target.custom){
+                _this.customObj="";
+                _this._customObj="";
+            }
+
+
+        });
+
+        //鼠标移动按住alt拖动画布
+        _this.canvas.on('mouse:move', function (options) {
+            if (panning && options && options.e) {
+                var delta = new fabric.Point(options.e.movementX, options.e.movementY);
+                _this.canvas.relativePan(delta);
+            }
+            if(_this.drawing&&_this.startDrawing){
+                _this.mouseTo.x=options.e.offsetX;
+                _this.mouseTo.y=options.e.offsetY;
+                _this.drawLine()
+            }
+        });
+        //拖动对象移动
+        _this.canvas.on('object:moving',function(options){
+            console.log(options)
+            if(options.target.pointEdit){  //pointEdit自定义的字段，
+                //_this.thePointObj=options.target;
+            }
+        });
+
+        
     },
     data() {
        return {
