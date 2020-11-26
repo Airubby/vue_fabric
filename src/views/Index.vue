@@ -251,7 +251,8 @@ export default {
             }else{
                 switch (item.otherType){
                     case 'Line':
-                        pic=new fabric.Line([left,top,left,top],item.json)
+                        //[终止位置，线长，起始位置，top]
+                        pic=new fabric.Line([left,item.json.width,left,top],item.json)
                         break;
                     default:
                         break;
@@ -265,7 +266,8 @@ export default {
             this.$notify.success("保存成功！");
         },
         clearDesign:function(){
-
+            console.log(this.design)
+            // console.log(this.design.getObjects())
         },
         //查看
         showDesign:function(){

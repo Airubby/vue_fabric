@@ -5,6 +5,9 @@
                 <img src="/images/logo.png">
             </div>
             <div class="btn">
+                <el-tooltip class="item" content="清空画布" placement="top-end">
+                    <span @click="clearDesign"><i class="el-icon-folder-delete"></i></span>
+                </el-tooltip>
                 <el-tooltip class="item" content="返回编辑" placement="top-end">
                     <span @click="backDesign"><i class="el-icon-edit-outline"></i></span>
                 </el-tooltip>
@@ -46,14 +49,68 @@ export default {
                 _this.design.setHeight(dom.offsetHeight);
             };
             if(sessionStorage.getItem("canvasDesign")){
-                _this.design.loadFromJSON(JSON.parse(sessionStorage.getItem("canvasDesign")), function() {});
+                _this.design.loadFromJSON(JSON.parse(sessionStorage.getItem("canvasDesign")), function() {
+                    _this.zoomToFitCanvas();
+                    window.onresize=function(){
+                        _this.resizeCanvas();
+                    };
+                });
             }
             
+        },
+        resizeCanvas:function() {
+            let dom=document.getElementById("canvas-box");
+            this.design.setWidth(dom.offsetWidth);
+            this.design.setHeight(dom.offsetHeight);
+            //先还原缩放比例与位置
+            this.design.setZoom(1);
+            this.design.absolutePan({x:0, y:0});
+            //缩放移动视图，使其适应Canvas大小
+            this.zoomToFitCanvas();
+        },
+        //缩放移动视图，使其适应Canvas大小
+        zoomToFitCanvas:function() {
+            let _this=this;
+            //遍历所有对对象，获取最小坐标，最大坐标
+            var objects = _this.design.getObjects();
+            if(objects.length > 0 ){
+                var rect = objects[0].getBoundingRect();
+                // rect.set('selectable', false);  //设置禁止编辑
+                var minX = rect.left;
+                var minY = rect.top;
+                var maxX = rect.left + rect.width;
+                var maxY = rect.top + rect.height;
+                for(var i = 1; i<objects.length; i++){
+                    rect = objects[i].getBoundingRect();
+                    // rect.set('selectable', false);  //设置禁止编辑
+                    minX = Math.min(minX, rect.left);
+                    minY= Math.min(minY, rect.top);
+                    maxX = Math.max(maxX, rect.left + rect.width);
+                    maxY= Math.max(maxY, rect.top + rect.height);
+                }
+            }
+    
+            //计算平移坐标
+            var panX = (maxX - minX - _this.design.width)/2 + minX;
+            var panY = (maxY - minY - _this.design.height)/2 + minY;
+            //开始平移
+            _this.design.absolutePan({x:panX, y:panY});
+    
+            //计算缩放比例
+            var zoom = Math.min(_this.design.width/(maxX - minX), _this.design.height/(maxY - minY));
+            //计算缩放中心
+            var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
+            //开始缩放
+            _this.design.zoomToPoint(zoomPoint, zoom);
         },
         //返回编辑
         backDesign:function(){
             this.$router.push({path:'/'});
-        }
+        },
+        clearDesign:function(){
+            console.log(this.design)
+            // console.log(this.design.getObjects())
+        },
     },
     components:{}
 }
