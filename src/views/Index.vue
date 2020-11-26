@@ -1,25 +1,37 @@
 <template>
     <div class="content">
-        <div class="side-bar">
-            <h2 class="title">
+        <div class="fabric-top">
+            <div class="logo">
                 <img src="/images/logo.png">
-            </h2>
-            <el-scrollbar class="side-content">
-                <el-collapse v-model="activeItem" accordion>
-                    <el-collapse-item :title="list.title" :name="list.key" :key="list.key" v-for="list in List">
-                        <div class="collapse-con">
-                            <span v-for="(item,index) in list.data" :title="item.title" :key="index">
-                                <i :class="item.icon" draggable="true" @dragstart="drag($event,item)"></i>
-                            </span>
-                        </div>
-                    </el-collapse-item>
-                </el-collapse>
-            </el-scrollbar>
+            </div>
+            <div class="btn">
+                <el-tooltip class="item" content="设计预览" placement="top-end">
+                    <span @click="showDesign"><i class="el-icon-view"></i></span>
+                </el-tooltip>
+                <el-tooltip class="item" content="清空画布" placement="top-end">
+                    <span @click="clearDesign"><i class="el-icon-folder-delete"></i></span>
+                </el-tooltip>
+                <el-tooltip class="item" content="保存操作(Ctrl+s)" placement="top-end">
+                    <span @click="saveDesign"><i class="el-icon-folder-checked"></i></span>
+                </el-tooltip>
+            </div>
         </div>
         <div class="fabric-con">
-            <div class="fabric-top"></div>
+            <div class="side-bar">
+                <el-scrollbar class="side-content">
+                    <el-collapse v-model="activeItem" accordion>
+                        <el-collapse-item :title="list.title" :name="list.key" :key="list.key" v-for="list in List">
+                            <div class="collapse-con">
+                                <span v-for="(item,index) in list.data" :title="item.title" :key="index">
+                                    <i :class="item.icon" draggable="true" @dragstart="drag($event,item)"></i>
+                                </span>
+                            </div>
+                        </el-collapse-item>
+                    </el-collapse>
+                </el-scrollbar>
+            </div>
             <div class="fabric-body" id="canvas-box" @drop='drop($event)' @touchstart='drop($event)'  @dragover='allowDrop($event)'>
-                <canvas id="canvas"></canvas>
+                <canvas id="designCanvas"></canvas>
             </div>
         </div>
     </div>
@@ -35,77 +47,6 @@ export default {
     mounted() {
         let _this=this;
         this.init();
-        //是否拖动
-        var panning = false;
-        //鼠标按下
-        _this.canvas.on('mouse:down', function (options) {
-            _this.mouseDown.x=options.e.offsetX;
-            _this.mouseDown.y=options.e.offsetY;
-            if(_this.drawing){
-                _this.startDrawing=true;
-            }
-            //按住alt键才可拖动画布
-            if(options.e.altKey) {
-                panning = true;
-                _this.canvas.selection = false;
-            }
-            //如果是按下point
-            if(options.target&&options.target.pointEdit){
-                _this.thePointObj=options.target;
-                _this.canvas.bringForward(options.target)
-            }
-            //如果按下是自定义对象
-            if(options.target&&options.target.custom){
-                _this.customObj=options.target;
-                _this._customObj=Object.assign({}, options.target)
-            }
-
-
-        });
-
-        //鼠标抬起
-        _this.canvas.on('mouse:up', function (options) {
-            _this.mouseTo.x=options.e.offsetX;
-            _this.mouseTo.y=options.e.offsetY;
-            panning = false;
-            _this.canvas.selection = true;
-            _this.startDrawing=false;
-            if(_this.drawing){
-                _this.drawGraph();
-            }
-            //如果是按下point抬起
-            if(options.target&&options.target.pointEdit){
-                _this.thePointObj="";
-            }
-            //如果按下是自定义对象
-            if(options.target&&options.target.custom){
-                _this.customObj="";
-                _this._customObj="";
-            }
-
-
-        });
-
-        //鼠标移动按住alt拖动画布
-        _this.canvas.on('mouse:move', function (options) {
-            if (panning && options && options.e) {
-                var delta = new fabric.Point(options.e.movementX, options.e.movementY);
-                _this.canvas.relativePan(delta);
-            }
-            if(_this.drawing&&_this.startDrawing){
-                _this.mouseTo.x=options.e.offsetX;
-                _this.mouseTo.y=options.e.offsetY;
-                _this.drawLine()
-            }
-        });
-        //拖动对象移动
-        _this.canvas.on('object:moving',function(options){
-            console.log(options)
-            if(options.target.pointEdit){  //pointEdit自定义的字段，
-                //_this.thePointObj=options.target;
-            }
-        });
-
         
     },
     data() {
@@ -198,28 +139,94 @@ export default {
                 }
             ],
            
-            type:"Line",
-            canvas:"",
-            evIcon:'',  //存储拖拽的图片组件，用于获取拖动图片组件时获取其偏移值offsetX，offsetY
+            viewportTransform:null, //拖动画布后，存的距离上右下左的间距{bl:{x:xx,y:yy},br:{},tl:{},tr:{}}
+            design:"",
        }
     },
     methods:{
         init:function(){
             let _this=this;
-            _this.canvas =new fabric.Canvas('canvas',{backgroundColor:''});
+            _this.design =new fabric.Canvas('designCanvas',{backgroundColor:''});
             let dom=document.getElementById("canvas-box");
-            window.onresize=resizeCanvas();
-            _this.canvas.setWidth(dom.offsetWidth);
-            _this.canvas.setHeight(dom.offsetHeight);
-            function resizeCanvas() {   
-                _this.canvas.setWidth(dom.offsetWidth);
-                _this.canvas.setHeight(dom.offsetHeight);
+            
+            _this.design.setWidth(dom.offsetWidth);
+            _this.design.setHeight(dom.offsetHeight);
+            window.onresize=function(){
+                _this.design.setWidth(dom.offsetWidth);
+                _this.design.setHeight(dom.offsetHeight);
             };
+            document.onkeydown=function(event){
+                if (_this && _this._isDestroyed) {return}  //摧毁组件了就不执行下面了，不然其他地方input框又可能不能输入下面的快捷键
+                var ev = event || window.event || arguments.callee.caller.arguments[0];
+                if(ev){
+                    switch(ev.keyCode){
+                        case 46 :// 点击删除
+                            _this.removeDevice();
+                            break;
+                        case 90:
+                            if(ev.ctrlKey){ //撤销 ctrl+z
+                                _this.backout();
+                            }
+                            break;
+                        case 89:
+                            if(ev.ctrlKey){ //反撤销  ctrl+y
+                            _this.returnBackout();
+                            }
+                            break;
+                        case 83:
+                            ev.preventDefault(); 
+                            if(ev.ctrlKey){
+                                _this.saveDesign();
+                            }
+                            break;
+                    }
+                }
+            }
+            
+            _this.design.on('mouse:wheel', function(opt) {
+                console.log(this)
+                var delta = opt.e.deltaY;
+                var zoom = _this.design.getZoom();
+                zoom *= 0.999 ** delta;
+                if (zoom > 20) zoom = 20;
+                if (zoom < 0.01) zoom = 0.01;
+                this.setZoom(zoom);
+                // updateMiniMapVP();
+                opt.e.preventDefault();
+                opt.e.stopPropagation();
+                _this.viewportTransform=this.viewportTransform;
+            });
+            _this.design.on('mouse:down', function(opt) {
+                var evt = opt.e;
+                if (evt.altKey === true) {
+                    this.isDragging = true;
+                    this.selection = false;
+                    this.lastPosX = evt.clientX;
+                    this.lastPosY = evt.clientY;
+                }
+            });
+            _this.design.on('mouse:move', function(opt) {
+                if (this.isDragging) {
+                    var e = opt.e;
+                    var vpt = this.viewportTransform;
+                    vpt[4] += e.clientX - this.lastPosX;
+                    vpt[5] += e.clientY - this.lastPosY;
+                    this.requestRenderAll();
+                    // updateMiniMapVP();
+                    this.lastPosX = e.clientX;
+                    this.lastPosY = e.clientY;
+                    _this.viewportTransform=this.viewportTransform;
+                }
+            });
+            _this.design.on('mouse:up', function(opt) {
+                this.isDragging = false;
+                this.selection = true;
+            });
+
+            
         },
         //拖拽
         drag:function(ev,item){
-            this.evIcon=ev;
-            console.log(item)
             ev.dataTransfer.setData("item",JSON.stringify(item));
         },
         allowDrop:function (ev) {
@@ -227,8 +234,13 @@ export default {
         },
         drop:function(ev){
             var item=JSON.parse(ev.dataTransfer.getData("item"));
-            var left=ev.offsetX-Number(item.json.left);
-            var top=ev.offsetY-Number(item.json.top);
+            var left=ev.offsetX;
+            var top=ev.offsetY;
+            //viewportTransform[0] 存的缩放比例；viewportTransform[4]X轴移动距离；this.viewportTransform[5]Y轴移动距离
+            if(this.viewportTransform){
+                left=left/this.viewportTransform[0]-this.viewportTransform[4];
+                top=top/this.viewportTransform[0]-this.viewportTransform[5];
+            }
             var pic="";
 
             var json=item.json;
@@ -239,16 +251,27 @@ export default {
             }else{
                 switch (item.otherType){
                     case 'Line':
-                        pic=new fabric.Line([left,top,left+Number(item.json.left),top],item.json)
+                        pic=new fabric.Line([left,top,left,top],item.json)
                         break;
                     default:
                         break;
                 }
             }
-            this.canvas.add(pic);
+            this.design.add(pic);
         },
+        //保存
+        saveDesign:function(){
+            sessionStorage.setItem("canvasDesign",JSON.stringify(this.design.toJSON()))
+            this.$notify.success("保存成功！");
+        },
+        clearDesign:function(){
+
+        },
+        //查看
+        showDesign:function(){
+            this.$router.push({path:'/show'});
+        }
     },
-    components:{}
 }
 </script>
 <style lang="less" scoped>
@@ -256,30 +279,41 @@ export default {
         width: 100%;
         height: 100%;
         background: #061C47;
+        .fabric-top{
+            width: 100%;
+            height: 60px;
+            font-size: 16px;
+            background: #052b62;
+            text-align: right;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            .item{
+                color: #DDE4F6;
+                margin-left: 20px;
+                font-size: 30px;
+                line-height: 60px;
+                cursor: pointer;
+            }
+        }
+        .fabric-con{
+            width: 100%;
+            height: calc(100% - 60px);
+            display: flex;
+        }
+        .fabric-body{
+            width: calc(100% - 225px);
+            height: 100%;
+        }
         .side-bar{
             width: 225px;
             height: 100%;
             display: block;
             background: #073474;
-            left: 0;
             color: #DDE4F6;
-            position: absolute;
             z-index: 999;
             transition: all 0.5s ease-in;
-           .title{
-                height: 60px;
-                line-height: 60px;
-                font-size: 16px;
-                padding-left: 20px;
-                color: #16c5bb;
-                background: #052B62;
-                display: flex;
-                align-items: center;
-            }
-            .side-content{
-                width: 100%;
-                height: calc(100% - 60px);
-            }
             .collapse-con{
                 padding: 15px 10px 0;
                 display: flex;
@@ -317,26 +351,7 @@ export default {
                 overflow-x: hidden; 
             }
         }
-        .fabric-con{
-            width: 100%;
-            height: 100%;
-            padding-left: 225px;
-            float: left;
-            transition: all 0.5s ease-in;
-            .fabric-top{
-                width: 100%;
-                height: 60px;
-                background: #052b62;
-            }
-            .fabric-body{
-                width: 100%;
-                height: calc(100% - 60px);
-                #canvas{
-                    width: 100%;
-                    height: 100%;
-                }
-            }
-        }
+        
     }
 </style>
 

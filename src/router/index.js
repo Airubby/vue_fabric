@@ -9,6 +9,12 @@ export const syncRouter=[
         component: () => import('@/views/Index.vue'),
     },
     {
+        path: '/show',
+        name: 'show',
+        meta: { title: 'show'},
+        component: () => import('@/views/Show.vue'),
+    },
+    {
         path: '/test',
         name: 'test',
         meta: { title: 'test'},
