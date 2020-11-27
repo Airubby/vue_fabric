@@ -5,6 +5,15 @@
                 <img src="/images/logo.png">
             </div>
             <div class="btn">
+                <el-color-picker v-model="color" show-alpha></el-color-picker>
+                <el-select v-model="value" placeholder="请选择">
+                    <el-option
+                    v-for="item in options"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value">
+                    </el-option>
+                </el-select>
                 <el-tooltip class="item" content="清空画布" placement="top-end">
                     <span @click="clearDesign"><i class="el-icon-folder-delete"></i></span>
                 </el-tooltip>
@@ -34,12 +43,16 @@ export default {
     data() {
        return {
             design:"",
+            options:[],
+            value:"",
+            color:"",
        }
     },
     methods:{
         init:function(){
             let _this=this;
             _this.design =new fabric.Canvas('showCanvas',{backgroundColor:''});
+            _this.design.hoverCursor = 'default'; // 设置对象hover的光标为默认
             let dom=document.getElementById("canvas-box");
             
             _this.design.setWidth(dom.offsetWidth);
@@ -54,6 +67,8 @@ export default {
                     window.onresize=function(){
                         _this.resizeCanvas();
                     };
+                    //test
+                    _this.test();
                 });
             }
             
@@ -71,23 +86,47 @@ export default {
         //缩放移动视图，使其适应Canvas大小
         zoomToFitCanvas:function() {
             let _this=this;
+            let minX,minY,maxX,maxY;
             //遍历所有对对象，获取最小坐标，最大坐标
             var objects = _this.design.getObjects();
             if(objects.length > 0 ){
-                var rect = objects[0].getBoundingRect();
-                // rect.set('selectable', false);  //设置禁止编辑
-                var minX = rect.left;
-                var minY = rect.top;
-                var maxX = rect.left + rect.width;
-                var maxY = rect.top + rect.height;
-                for(var i = 1; i<objects.length; i++){
-                    rect = objects[i].getBoundingRect();
-                    // rect.set('selectable', false);  //设置禁止编辑
-                    minX = Math.min(minX, rect.left);
-                    minY= Math.min(minY, rect.top);
-                    maxX = Math.max(maxX, rect.left + rect.width);
-                    maxY= Math.max(maxY, rect.top + rect.height);
+                for(let i=0;i<objects.length;i++){
+                    var rect = objects[i].getBoundingRect();
+                    if(i==0){
+                        minX = rect.left;
+                        minY = rect.top;
+                        maxX = rect.left + rect.width;
+                        maxY = rect.top + rect.height;
+                    }else{
+                        minX = Math.min(minX, rect.left);
+                        minY= Math.min(minY, rect.top);
+                        maxX = Math.max(maxX, rect.left + rect.width);
+                        maxY= Math.max(maxY, rect.top + rect.height);
+                    }
+                    objects[i].set('selectable', false);  //设置禁止编辑
+                    objects[i].toObject = (function (toObject) {
+                        return function (properties) {
+                            return fabric.util.object.extend(toObject.call(this, properties), {
+                                data: this.data
+                            });
+                        };
+                    })(objects[i].toObject);
                 }
+
+                // var rect = objects[0].getBoundingRect();
+                // var minX = rect.left;
+                // var minY = rect.top;
+                // var maxX = rect.left + rect.width;
+                // var maxY = rect.top + rect.height;
+                // objects[0].set('selectable', false);  //设置禁止编辑
+                // for(var i = 1; i<objects.length; i++){
+                //     rect = objects[i].getBoundingRect();
+                //     minX = Math.min(minX, rect.left);
+                //     minY= Math.min(minY, rect.top);
+                //     maxX = Math.max(maxX, rect.left + rect.width);
+                //     maxY= Math.max(maxY, rect.top + rect.height);
+                //     objects[i].set('selectable', false);  //设置禁止编辑
+                // }
             }
     
             //计算平移坐标
@@ -102,13 +141,20 @@ export default {
             var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
             //开始缩放
             _this.design.zoomToPoint(zoomPoint, zoom);
+
+        },
+
+        //test
+        test:function(){
+            var objects = this.design.getObjects();
+            console.log(objects)
         },
         //返回编辑
         backDesign:function(){
             this.$router.push({path:'/'});
         },
         clearDesign:function(){
-            console.log(this.design)
+            this.test()
             // console.log(this.design.getObjects())
         },
     },

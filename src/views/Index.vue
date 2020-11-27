@@ -62,6 +62,7 @@ export default {
                                 type:'Rect',
                                 icon:'el-icon-s-marketing',
                                 json:{
+                                    data:{id:"a123456",name:"矩形"},
                                     width: 50, height: 50, left: 25, top: 25,
                                     fill: 'rgba(255,0,0,0.5)'
                                 },
@@ -70,6 +71,7 @@ export default {
                                 type:'Circle',
                                 icon:'el-icon-s-marketing',
                                 json:{
+                                    data:{id:"b123456",name:"圆形"},
                                     radius: 50, left: 12, top: 12, fill: '#aac'
                                 }
                             },{
@@ -77,6 +79,7 @@ export default {
                                 type:'Triangle',
                                 icon:'el-icon-s-marketing',
                                 json:{
+                                    data:{id:"c123456",name:"三角形"},
                                     width: 100, height: 100, left: 50, top: 50, fill: '#cca'
                                 }
                             },{
@@ -85,6 +88,7 @@ export default {
                                 otherType:"Line",
                                 icon:'el-icon-s-marketing',
                                 json:{
+                                    data:{id:"d123456",name:"直线"},
                                     fill: '#5E2300',
                                     stroke: '#5E2300',
                                     strokeWidth: 4,
@@ -99,47 +103,12 @@ export default {
                     title:"自定义图形",
                     key:"second",
                     data:[
-                        {
-                                title:'矩形',
-                                type:'Rect',
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    width: 50, height: 50, left: 50, top: 50,
-                                    fill: 'rgba(255,0,0,0.5)'
-                                },
-                            },{
-                                title:'圆形',
-                                type:'Circle',
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    radius: 50, left: 50, top: 50, fill: '#aac'
-                                }
-                            },{
-                                title:'三角形',
-                                type:'Triangle',
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    width: 100, height: 100, left: 50, top: 50, fill: '#cca'
-                                }
-                            },{
-                                title:'直线',
-                                type:'',
-                                otherType:"Line",
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    fill: '#5E2300',
-                                    stroke: '#5E2300',
-                                    strokeWidth: 4,
-                                    width: 100, 
-                                    left: 50, 
-                                    top: 50
-                                }
-                            }
+                        
                     ]
                 }
             ],
            
-            viewportTransform:null, //拖动画布后，存的距离上右下左的间距{bl:{x:xx,y:yy},br:{},tl:{},tr:{}}
+            viewportTransform:null, //拖动画布后，存的距离上左的间距arr[0]比率；arr[4]左右移动的距离；arr[5]上下移动距离
             design:"",
        }
     },
@@ -241,28 +210,40 @@ export default {
                 left=left/this.viewportTransform[0]-this.viewportTransform[4];
                 top=top/this.viewportTransform[0]-this.viewportTransform[5];
             }
-            var pic="";
+            var object="";
 
             var json=item.json;
             json.left=left;
             json.top=top;
             if(item.type){
-                pic= new fabric[item.type](json);
+                object= new fabric[item.type](json);
             }else{
                 switch (item.otherType){
                     case 'Line':
                         //[终止位置，线长，起始位置，top]
-                        pic=new fabric.Line([left,item.json.width,left,top],item.json)
+                        object=new fabric.Line([left,item.json.width,left,top],item.json)
                         break;
                     default:
                         break;
                 }
             }
-            this.design.add(pic);
+            this.addObject(object);
+        },
+        addObject:function(object){
+            let _this=this;
+            object.toObject = (function (toObject) {//赋值自定义属性
+                return function (properties) {
+                    return fabric.util.object.extend(toObject.call(this, properties), {
+                        data: this.data
+                    });
+                };
+            })(object.toObject);
+            this.design.add(object);
         },
         //保存
         saveDesign:function(){
             sessionStorage.setItem("canvasDesign",JSON.stringify(this.design.toJSON()))
+            console.log(JSON.stringify(this.design.toJSON()))
             this.$notify.success("保存成功！");
         },
         clearDesign:function(){
