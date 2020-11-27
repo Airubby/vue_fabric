@@ -5,13 +5,13 @@
                 <img src="/images/logo.png">
             </div>
             <div class="btn">
-                <el-color-picker v-model="color" show-alpha></el-color-picker>
-                <el-select v-model="value" placeholder="请选择">
+                <el-color-picker v-model="color" show-alpha @change="changeColor"></el-color-picker>
+                <el-select v-model="value" placeholder="请选择" @change="changeObject">
                     <el-option
-                    v-for="item in options"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value">
+                    v-for="item in objects"
+                    :key="item.data.id"
+                    :label="item.data.name"
+                    :value="item.data.id">
                     </el-option>
                 </el-select>
                 <el-tooltip class="item" content="清空画布" placement="top-end">
@@ -43,9 +43,10 @@ export default {
     data() {
        return {
             design:"",
-            options:[],
+            objects:[],
             value:"",
             color:"",
+            index:""
        }
     },
     methods:{
@@ -146,8 +147,23 @@ export default {
 
         //test
         test:function(){
-            var objects = this.design.getObjects();
-            console.log(objects)
+            this.objects = this.design.getObjects();
+            console.log(this.objects)
+        },
+        changeColor:function(val){
+            console.log(val)
+            if(this.value){
+                for(let i=0;i<this.objects.length;i++){
+                    if(this.value==this.objects[i].data.id){
+                        this.objects[i].set("fill",val);
+                        this.design.renderAll()
+                    }
+                }
+                console.log(this.objects)
+            }
+        },
+        changeObject:function(){
+
         },
         //返回编辑
         backDesign:function(){
