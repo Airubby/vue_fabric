@@ -18,7 +18,7 @@
         </div>
         <div class="fabric-con">
             <div class="side-bar">
-                <el-scrollbar class="side-content">
+                <el-scrollbar class="scrollbar">
                     <el-collapse v-model="activeItem" accordion>
                         <el-collapse-item :title="list.title" :name="list.key" :key="list.key" v-for="list in List">
                             <div class="collapse-con">
@@ -49,6 +49,7 @@ export default {
         let _this=this;
         this.init();
         
+
     },
     data() {
        return {
@@ -113,6 +114,7 @@ export default {
                                 data:{id:"e123456",name:"自定义"},
                                 width: 100, 
                                 height: 100, 
+                                fill:"transparent",
                                 options:{
                                     title:{
                                         text:"title",  
@@ -259,7 +261,20 @@ export default {
                 this.isDragging = false;
                 this.selection = true;
             });
+            _this.design.on('object:move',function(opt){
+                _this.$confirm("确定删除？","提示",{
+                    confirmButtonText:"确定",
+                    cancelButtonText:"取消",
+                    type:"warning"
+                }).then(()=>{
+                    _this.design.remove(
+                        _this.design.item(
+                            _this.design.getObjects().indexOf(opt.target)
+                        )
+                    )
 
+                })
+            });
             
         },
         //拖拽
@@ -315,7 +330,6 @@ export default {
             var canvas=document.createElement("canvas");
             canvas.width=json.width?json.width:100;
             canvas.height=json.height?json.height:100;
-            canvas.backgroundColor="#f00"
             var myChart = echarts.init(canvas);
             var options=json.options||{}
             myChart.setOption(options, true);
@@ -337,7 +351,8 @@ export default {
                         pixelRatio: 1,
                         backgroundColor:""
                     });
-                    ctx.drawImage(offcanvas,0,0);
+                    //在画布上定位图像，并规定图像的宽度和高度： ctx.drawImage(img,x,y,width,height);
+                    ctx.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
                 }
             });
             return new LabeledRect(json);

@@ -56,11 +56,11 @@ export default {
             _this.design.hoverCursor = 'default'; // 设置对象hover的光标为默认
             let dom=document.getElementById("canvas-box");
             
-            _this.design.setWidth(dom.offsetWidth);
-            _this.design.setHeight(dom.offsetHeight);
+            _this.design.setWidth(dom.offsetWidth-30);
+            _this.design.setHeight(dom.offsetHeight-30);
             window.onresize=function(){
-                _this.design.setWidth(dom.offsetWidth);
-                _this.design.setHeight(dom.offsetHeight);
+                _this.design.setWidth(dom.offsetWidth-30);
+                _this.design.setHeight(dom.offsetHeight-30);
             };
             if(sessionStorage.getItem("canvasDesign")){
                 _this.design.loadFromJSON(JSON.parse(sessionStorage.getItem("canvasDesign")), function() {
@@ -208,6 +208,7 @@ export default {
         .fabric-body{
             width: 100%;
             height: 100%;
+            padding: 15px;
         }
         
     }
