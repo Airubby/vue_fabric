@@ -10,6 +10,7 @@
   "dependencies": {
     "axios": "0.18.0",
     "babel-polyfill": "6.26.0",
+    "echarts": "^4.1.0",
     "el-table-pagination": "0.5.1",
     "element-ui": "2.9.2",
     "fabric": "^4.2.0",

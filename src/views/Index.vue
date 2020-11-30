@@ -40,6 +40,7 @@
 
 <script>
 import { fabric } from "fabric";
+import echarts from 'echarts'
 export default {
     created () {
 
@@ -58,52 +59,119 @@ export default {
                     key:"first",
                     data:[
                         {
-                                title:'矩形',
-                                type:'Rect',
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    data:{id:"a123456",name:"矩形"},
-                                    width: 50, height: 50, left: 25, top: 25,
-                                    fill: 'rgba(255,0,0,0.5)'
-                                },
-                            },{
-                                title:'圆形',
-                                type:'Circle',
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    data:{id:"b123456",name:"圆形"},
-                                    radius: 50, left: 12, top: 12, fill: '#aac'
-                                }
-                            },{
-                                title:'三角形',
-                                type:'Triangle',
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    data:{id:"c123456",name:"三角形"},
-                                    width: 100, height: 100, left: 50, top: 50, fill: '#cca'
-                                }
-                            },{
-                                title:'直线',
-                                type:'',
-                                otherType:"Line",
-                                icon:'el-icon-s-marketing',
-                                json:{
-                                    data:{id:"d123456",name:"直线"},
-                                    fill: '#5E2300',
-                                    stroke: '#5E2300',
-                                    strokeWidth: 4,
-                                    width: 100, 
-                                    left: 50, 
-                                    top: 2
-                                }
+                            title:'矩形',
+                            type:'Rect',
+                            icon:'el-icon-s-marketing',
+                            json:{
+                                data:{id:"a123456",name:"矩形"},
+                                width: 50, height: 50, left: 25, top: 25,
+                                fill: 'rgba(255,0,0,0.5)'
+                            },
+                        },{
+                            title:'圆形',
+                            type:'Circle',
+                            icon:'el-icon-s-marketing',
+                            json:{
+                                data:{id:"b123456",name:"圆形"},
+                                radius: 50, left: 12, top: 12, fill: '#aac'
                             }
+                        },{
+                            title:'三角形',
+                            type:'Triangle',
+                            icon:'el-icon-s-marketing',
+                            json:{
+                                data:{id:"c123456",name:"三角形"},
+                                width: 100, height: 100, left: 50, top: 50, fill: '#cca'
+                            }
+                        },{
+                            title:'直线',
+                            type:'',
+                            otherType:"Line",
+                            icon:'el-icon-s-marketing',
+                            json:{
+                                data:{id:"d123456",name:"直线"},
+                                fill: '#5E2300',
+                                stroke: '#5E2300',
+                                strokeWidth: 4,
+                                width: 100, 
+                                left: 50, 
+                                top: 2
+                            }
+                        }
                     ]
                 },
                 {
                     title:"自定义图形",
                     key:"second",
                     data:[
-                        
+                        {
+                            title:'echart',
+                            type:'',
+                            otherType:"echart",
+                            icon:'el-icon-s-marketing',
+                            json:{
+                                data:{id:"e123456",name:"自定义"},
+                                width: 100, 
+                                height: 100, 
+                                options:{
+                                    title:{
+                                        text:"title",  
+                                        bottom: 15,
+                                        x:'center',
+                                        textStyle:{
+                                            color:"#999",
+                                            fontSize:'16'
+                                        },
+                                    },
+                                    series: [
+                                        {
+                                            name: "title",
+                                            type: 'gauge',
+                                            radius:'70%',
+                                            min:1,
+                                            max:3,
+                                            splitNumber:0,
+                                            axisLine:{
+                                                lineStyle:{
+                                                    color:[[0.5, "#00AB6F"],[1, "#E4E5ED"]],
+                                                    width:'10',
+                                                }
+                                            },
+                                            splitLine:{
+                                                show:false
+                                            },
+                                            axisTick:{
+                                                show:false
+                                            },
+                                            axisLabel:{
+                                                show:false
+                                            },
+                                            pointer:{
+                                                length:'75%',
+                                                width:'0.1%'
+                                            },
+                                            itemStyle:{
+                                                normal:{
+                                                    color:'transparent'
+                                                }
+                                            },
+                                            detail: {
+                                                    show: true,
+                                                    textStyle: {
+                                                        fontSize: 26,
+                                                        color:'#fff',
+                                                    },
+                                                    formatter: '{value}',
+                                                    offsetCenter: ['0%', '0%'],
+                                                    
+
+                                                },
+                                            data: [{value: 1.5}]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     ]
                 }
             ],
@@ -223,6 +291,8 @@ export default {
                         //[终止位置，线长，起始位置，top]
                         object=new fabric.Line([left,item.json.width,left,top],item.json)
                         break;
+                    case 'echart':
+                        object=this.getCanvas(item.json);
                     default:
                         break;
                 }
@@ -239,6 +309,38 @@ export default {
                 };
             })(object.toObject);
             this.design.add(object);
+        },
+        getCanvas:function(json){
+            console.log(json)
+            var canvas=document.createElement("canvas");
+            canvas.width=json.width?json.width:100;
+            canvas.height=json.height?json.height:100;
+            canvas.backgroundColor="#f00"
+            var myChart = echarts.init(canvas);
+            var options=json.options||{}
+            myChart.setOption(options, true);
+            var LabeledRect = fabric.util.createClass(fabric.Rect, {
+                type: 'labeledRect',
+                initialize: function(options) {
+                    options || (options = { });
+                    this.callSuper('initialize', options);
+                    // this.set('label', options.label || '');
+                },
+                toObject: function() {
+                    return fabric.util.object.extend(this.callSuper('toObject'), {
+                        // label: this.get('label'),
+                    });
+                },
+                _render: function(ctx) {
+                    this.callSuper('_render', ctx);
+                    var offcanvas = myChart.getRenderedCanvas({
+                        pixelRatio: 1,
+                        backgroundColor:""
+                    });
+                    ctx.drawImage(offcanvas,0,0);
+                }
+            });
+            return new LabeledRect(json);
         },
         //保存
         saveDesign:function(){
