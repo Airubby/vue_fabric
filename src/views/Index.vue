@@ -159,7 +159,7 @@ export default {
                     ]
                 }
             ],
-           
+            zoomPoint:"",//中心点
             viewportTransform:null, //拖动画布后，存的距离上左的间距arr[0]比率；arr[4]左右移动的距离；arr[5]上下移动距离
             design:"",
        }
@@ -172,6 +172,7 @@ export default {
             
             _this.design.setWidth(dom.offsetWidth);
             _this.design.setHeight(dom.offsetHeight);
+            this.zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
             window.onresize=function(){
                 _this.design.setWidth(dom.offsetWidth);
                 _this.design.setHeight(dom.offsetHeight);
@@ -206,14 +207,14 @@ export default {
             
             _this.design.on('mouse:wheel', function(opt) {
                 console.log(this)
+                var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
                 var delta = opt.e.deltaY;
                 var zoom = _this.design.getZoom();
                 zoom *= 0.999 ** delta;
                 if (zoom > 20) zoom = 20;
                 if (zoom < 0.01) zoom = 0.01;
                 this.zoomToPoint(zoomPoint, zoom);
-                this.setZoom(zoom);
-                // updateMiniMapVP();
+                // this.setZoom(zoom);
                 opt.e.preventDefault();
                 opt.e.stopPropagation();
                 _this.viewportTransform=this.viewportTransform;
@@ -234,7 +235,6 @@ export default {
                     vpt[4] += e.clientX - this.lastPosX;
                     vpt[5] += e.clientY - this.lastPosY;
                     this.requestRenderAll();
-                    // updateMiniMapVP();
                     this.lastPosX = e.clientX;
                     this.lastPosY = e.clientY;
                     _this.viewportTransform=this.viewportTransform;
@@ -277,7 +277,9 @@ export default {
                 top=top/this.viewportTransform[0]-this.viewportTransform[5];
             }
             var object="";
-
+            var zoomPoint = new fabric.Point(this.design.width / 2 , this.design.height / 2);
+            //开始缩放
+            this.design.zoomToPoint(zoomPoint, 1);
             // var json=item;
             json.left=left;
             json.top=top;

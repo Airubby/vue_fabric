@@ -14,7 +14,7 @@
                     :value="item.data.id">
                     </el-option>
                 </el-select>
-                <el-tooltip class="item" content="清空画布" placement="top-end">
+                <el-tooltip class="item" content="测试" placement="top-end">
                     <span @click="clearDesign"><i class="el-icon-folder-delete"></i></span>
                 </el-tooltip>
                 <el-tooltip class="item" content="返回编辑" placement="top-end">
@@ -45,6 +45,7 @@ export default {
        return {
             design:"",
             objects:[],
+            originalObj:[],
             value:"",
             color:"",
             index:""
@@ -69,18 +70,17 @@ export default {
                 if (zoom < 0.01) zoom = 0.01;
                 this.zoomToPoint(zoomPoint, zoom);
                 // this.setZoom(zoom);
-                // updateMiniMapVP();
                 opt.e.preventDefault();
                 opt.e.stopPropagation();
                 _this.viewportTransform=this.viewportTransform;
             });
             if(sessionStorage.getItem("canvasDesign")){
-                let objects=JSON.parse(sessionStorage.getItem("canvasDesign")).objects;
-                _this.zoomToFitCanvas(objects);
+                _this.originalObj=JSON.parse(sessionStorage.getItem("canvasDesign")).objects;
+                _this.zoomToFitCanvas();
                 window.onresize=function(){
                     _this.design.setWidth(dom.offsetWidth-30);
                     _this.design.setHeight(dom.offsetHeight-30);
-                    _this.resizeCanvas(objects);
+                    _this.resizeCanvas();
                     
                 };
                 //以下是加载自带的绘图出来的
@@ -140,7 +140,7 @@ export default {
             });
             return new LabeledRect(json);
         },
-        resizeCanvas:function(objects) {
+        resizeCanvas:function() {
             let dom=document.getElementById("canvas-box");
             this.design.setWidth(dom.offsetWidth);
             this.design.setHeight(dom.offsetHeight);
@@ -148,17 +148,17 @@ export default {
             this.design.setZoom(1);
             this.design.absolutePan({x:0, y:0});
             //缩放移动视图，使其适应Canvas大小
-            this.zoomToFitCanvas(objects);
+            this.zoomToFitCanvas();
         },
         //缩放移动视图，使其适应Canvas大小
-        zoomToFitCanvas:function(objects) {
+        zoomToFitCanvas:function() {
             let _this=this;
 
             let object="",rect={}, minX,minY,maxX,maxY;
             //遍历所有对对象，获取最小坐标，最大坐标
-            if(objects.length > 0 ){
-                for(let i=0;i<objects.length;i++){
-                    rect = objects[i];
+            if(_this.originalObj.length > 0 ){
+                for(let i=0;i<_this.originalObj.length;i++){
+                    rect = _this.originalObj[i];
                     if(i==0){
                         minX = rect.left;
                         minY = rect.top;
@@ -184,10 +184,8 @@ export default {
                 //开始缩放
                 _this.design.zoomToPoint(zoomPoint, zoom);
 
-                for(let i=0;i<objects.length;i++){
-                    console.log(objects[i])
-                    console.log(zoom)
-                    rect = objects[i];
+                for(let i=0;i<_this.originalObj.length;i++){
+                    rect = _this.originalObj[i];
                     switch (rect.data.type){
                         case 'Line':
                             //[终止位置，线长，起始位置，top]
@@ -212,6 +210,7 @@ export default {
         test:function(){
             this.objects = this.design.getObjects();
             console.log(this.objects)
+            console.log(this.originalObj)
         },
         changeColor:function(val){
             console.log(val)
