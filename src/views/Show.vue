@@ -33,6 +33,7 @@
 
 <script>
 import { fabric } from "fabric";
+import echarts from 'echarts'
 export default {
     created () {
 
@@ -58,23 +59,88 @@ export default {
             
             _this.design.setWidth(dom.offsetWidth-30);
             _this.design.setHeight(dom.offsetHeight-30);
-            window.onresize=function(){
-                _this.design.setWidth(dom.offsetWidth-30);
-                _this.design.setHeight(dom.offsetHeight-30);
-            };
+            _this.design.on('mouse:wheel', function(opt) {
+                console.log(this)
+                var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
+                var delta = opt.e.deltaY;
+                var zoom = _this.design.getZoom();
+                zoom *= 0.999 ** delta;
+                if (zoom > 20) zoom = 20;
+                if (zoom < 0.01) zoom = 0.01;
+                this.zoomToPoint(zoomPoint, zoom);
+                // this.setZoom(zoom);
+                // updateMiniMapVP();
+                opt.e.preventDefault();
+                opt.e.stopPropagation();
+                _this.viewportTransform=this.viewportTransform;
+            });
             if(sessionStorage.getItem("canvasDesign")){
-                _this.design.loadFromJSON(JSON.parse(sessionStorage.getItem("canvasDesign")), function() {
-                    _this.zoomToFitCanvas();
-                    window.onresize=function(){
-                        _this.resizeCanvas();
-                    };
-                    //test
-                    _this.test();
-                });
+                let objects=JSON.parse(sessionStorage.getItem("canvasDesign")).objects;
+                _this.zoomToFitCanvas(objects);
+                window.onresize=function(){
+                    _this.design.setWidth(dom.offsetWidth-30);
+                    _this.design.setHeight(dom.offsetHeight-30);
+                    _this.resizeCanvas(objects);
+                    
+                };
+                //以下是加载自带的绘图出来的
+                // _this.design.loadFromJSON(JSON.parse(sessionStorage.getItem("canvasDesign")), function() {
+                //     _this.zoomToFitCanvas();
+                //     window.onresize=function(){
+                //         _this.resizeCanvas();
+                //     };
+                //     //test
+                //     _this.test();
+                // });
             }
             
         },
-        resizeCanvas:function() {
+      
+        addObject:function(object){
+            let _this=this;
+            object.toObject = (function (toObject) {//赋值自定义属性
+                return function (properties) {
+                    return fabric.util.object.extend(toObject.call(this, properties), {
+                        data: this.data
+                    });
+                };
+            })(object.toObject);
+            object.set('selectable', false);  //设置禁止编辑
+            this.design.add(object);
+        },
+        getCanvas:function(json,zoom){
+            let _this=this;
+            var canvas=document.createElement("canvas");
+            canvas.width=json.width?json.width*zoom:100;
+            canvas.height=json.height?json.height*zoom:100;
+            var myChart = echarts.init(canvas,null,{devicePixelRatio:2});
+            var options=json.data.options||{}
+            myChart.setOption(options, true);
+            var LabeledRect = fabric.util.createClass(fabric.Rect, {
+                type: 'labeledRect',
+                initialize: function(options) {
+                    options || (options = { });
+                    this.callSuper('initialize', options);
+                    // this.set('label', options.label || '');
+                },
+                toObject: function() {
+                    return fabric.util.object.extend(this.callSuper('toObject'), {
+                        // label: this.get('label'),
+                    });
+                },
+                _render: function(ctx) {
+                    this.callSuper('_render', ctx);
+                    var offcanvas = myChart.getRenderedCanvas({
+                        pixelRatio: 2,
+                        backgroundColor:""
+                    });
+                    //在画布上定位图像，并规定图像的宽度和高度： ctx.drawImage(img,x,y,width,height);
+                    ctx.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
+                }
+            });
+            return new LabeledRect(json);
+        },
+        resizeCanvas:function(objects) {
             let dom=document.getElementById("canvas-box");
             this.design.setWidth(dom.offsetWidth);
             this.design.setHeight(dom.offsetHeight);
@@ -82,17 +148,17 @@ export default {
             this.design.setZoom(1);
             this.design.absolutePan({x:0, y:0});
             //缩放移动视图，使其适应Canvas大小
-            this.zoomToFitCanvas();
+            this.zoomToFitCanvas(objects);
         },
         //缩放移动视图，使其适应Canvas大小
-        zoomToFitCanvas:function() {
+        zoomToFitCanvas:function(objects) {
             let _this=this;
-            let minX,minY,maxX,maxY;
+
+            let object="",rect={}, minX,minY,maxX,maxY;
             //遍历所有对对象，获取最小坐标，最大坐标
-            var objects = _this.design.getObjects();
             if(objects.length > 0 ){
                 for(let i=0;i<objects.length;i++){
-                    var rect = objects[i].getBoundingRect();
+                    rect = objects[i];
                     if(i==0){
                         minX = rect.left;
                         minY = rect.top;
@@ -104,44 +170,41 @@ export default {
                         maxX = Math.max(maxX, rect.left + rect.width);
                         maxY= Math.max(maxY, rect.top + rect.height);
                     }
-                    objects[i].set('selectable', false);  //设置禁止编辑
-                    objects[i].toObject = (function (toObject) {
-                        return function (properties) {
-                            return fabric.util.object.extend(toObject.call(this, properties), {
-                                data: this.data
-                            });
-                        };
-                    })(objects[i].toObject);
                 }
+                //计算平移坐标
+                var panX = (maxX - minX - _this.design.width)/2 + minX;
+                var panY = (maxY - minY - _this.design.height)/2 + minY;
+                //开始平移
+                _this.design.absolutePan({x:panX, y:panY});
+        
+                //计算缩放比例
+                var zoom = Math.min(_this.design.width/(maxX - minX), _this.design.height/(maxY - minY));
+                //计算缩放中心
+                var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
+                //开始缩放
+                _this.design.zoomToPoint(zoomPoint, zoom);
 
-                // var rect = objects[0].getBoundingRect();
-                // var minX = rect.left;
-                // var minY = rect.top;
-                // var maxX = rect.left + rect.width;
-                // var maxY = rect.top + rect.height;
-                // objects[0].set('selectable', false);  //设置禁止编辑
-                // for(var i = 1; i<objects.length; i++){
-                //     rect = objects[i].getBoundingRect();
-                //     minX = Math.min(minX, rect.left);
-                //     minY= Math.min(minY, rect.top);
-                //     maxX = Math.max(maxX, rect.left + rect.width);
-                //     maxY= Math.max(maxY, rect.top + rect.height);
-                //     objects[i].set('selectable', false);  //设置禁止编辑
-                // }
+                for(let i=0;i<objects.length;i++){
+                    console.log(objects[i])
+                    console.log(zoom)
+                    rect = objects[i];
+                    switch (rect.data.type){
+                        case 'Line':
+                            //[终止位置，线长，起始位置，top]
+                            object=new fabric.Line([left,rect.width,left,top],rect)
+                            break;
+                        case 'Echart':
+                            object=this.getCanvas(rect,zoom);
+                            break;
+                        default:
+                            object= new fabric[rect.data.type](rect);
+                            break;
+                    }
+                    this.addObject(object);
+                }
+                console.log(this.design.getObjects())
             }
     
-            //计算平移坐标
-            var panX = (maxX - minX - _this.design.width)/2 + minX;
-            var panY = (maxY - minY - _this.design.height)/2 + minY;
-            //开始平移
-            _this.design.absolutePan({x:panX, y:panY});
-    
-            //计算缩放比例
-            var zoom = Math.min(_this.design.width/(maxX - minX), _this.design.height/(maxY - minY));
-            //计算缩放中心
-            var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
-            //开始缩放
-            _this.design.zoomToPoint(zoomPoint, zoom);
 
         },
 

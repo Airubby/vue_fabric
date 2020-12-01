@@ -22,8 +22,8 @@
                     <el-collapse v-model="activeItem" accordion>
                         <el-collapse-item :title="list.title" :name="list.key" :key="list.key" v-for="list in List">
                             <div class="collapse-con">
-                                <span v-for="(item,index) in list.data" :title="item.title" :key="index">
-                                    <i :class="item.icon" draggable="true" @dragstart="drag($event,item)"></i>
+                                <span v-for="(item,index) in list.data" :title="item.data.name" :key="index">
+                                    <i :class="item.data.icon" draggable="true" @dragstart="drag($event,item)"></i>
                                 </span>
                             </div>
                         </el-collapse-item>
@@ -60,44 +60,30 @@ export default {
                     key:"first",
                     data:[
                         {
-                            title:'矩形',
-                            type:'Rect',
-                            icon:'el-icon-s-marketing',
-                            json:{
-                                data:{id:"a123456",name:"矩形"},
-                                width: 50, height: 50, left: 25, top: 25,
-                                fill: 'rgba(255,0,0,0.5)'
+                            data:{
+                                id:"a123456",
+                                name:"矩形",
+                                icon:'el-icon-s-marketing',
+                                type:'Rect',
                             },
+                            width: 50, height: 50,
+                            fill: 'rgba(255,0,0,0.5)'
                         },{
-                            title:'圆形',
-                            type:'Circle',
-                            icon:'el-icon-s-marketing',
-                            json:{
-                                data:{id:"b123456",name:"圆形"},
-                                radius: 50, left: 12, top: 12, fill: '#aac'
-                            }
+                            
+                            data:{id:"b123456",name:"圆形",icon:'el-icon-s-marketing',type:'Circle'},
+                            radius: 50, left: 12, top: 12, fill: '#aac'
+                        },
+                        {
+                            width: 100, height: 100, fill: '#cca',
+                            data:{id:"c123456",name:"三角形",icon:'el-icon-s-marketing',type:'Triangle'},
+                            
                         },{
-                            title:'三角形',
-                            type:'Triangle',
-                            icon:'el-icon-s-marketing',
-                            json:{
-                                data:{id:"c123456",name:"三角形"},
-                                width: 100, height: 100, left: 50, top: 50, fill: '#cca'
-                            }
-                        },{
-                            title:'直线',
-                            type:'',
-                            otherType:"Line",
-                            icon:'el-icon-s-marketing',
-                            json:{
-                                data:{id:"d123456",name:"直线"},
-                                fill: '#5E2300',
-                                stroke: '#5E2300',
-                                strokeWidth: 4,
-                                width: 100, 
-                                left: 50, 
-                                top: 2
-                            }
+                            data:{id:"d123456",name:"直线",icon:'el-icon-s-marketing',type:'Line'},
+                            fill: '#5E2300',
+                            stroke: '#5E2300',
+                            strokeWidth: 10,
+                            width: 100, 
+                           
                         }
                     ]
                 },
@@ -106,15 +92,8 @@ export default {
                     key:"second",
                     data:[
                         {
-                            title:'echart',
-                            type:'',
-                            otherType:"echart",
-                            icon:'el-icon-s-marketing',
-                            json:{
-                                data:{id:"e123456",name:"自定义"},
-                                width: 100, 
-                                height: 100, 
-                                fill:"transparent",
+                            data:{
+                                id:"e123456",name:"自定义",icon:'el-icon-s-marketing',type:'Echart',
                                 options:{
                                     title:{
                                         text:"title",  
@@ -172,7 +151,10 @@ export default {
                                         }
                                     ]
                                 }
-                            }
+                            },
+                            width: 100, 
+                            height: 100, 
+                            fill:"transparent",
                         }
                     ]
                 }
@@ -229,6 +211,7 @@ export default {
                 zoom *= 0.999 ** delta;
                 if (zoom > 20) zoom = 20;
                 if (zoom < 0.01) zoom = 0.01;
+                this.zoomToPoint(zoomPoint, zoom);
                 this.setZoom(zoom);
                 // updateMiniMapVP();
                 opt.e.preventDefault();
@@ -285,7 +268,7 @@ export default {
             ev.preventDefault();
         },
         drop:function(ev){
-            var item=JSON.parse(ev.dataTransfer.getData("item"));
+            var json=JSON.parse(ev.dataTransfer.getData("item"));
             var left=ev.offsetX;
             var top=ev.offsetY;
             //viewportTransform[0] 存的缩放比例；viewportTransform[4]X轴移动距离；this.viewportTransform[5]Y轴移动距离
@@ -295,22 +278,20 @@ export default {
             }
             var object="";
 
-            var json=item.json;
+            // var json=item;
             json.left=left;
             json.top=top;
-            if(item.type){
-                object= new fabric[item.type](json);
-            }else{
-                switch (item.otherType){
-                    case 'Line':
-                        //[终止位置，线长，起始位置，top]
-                        object=new fabric.Line([left,item.json.width,left,top],item.json)
-                        break;
-                    case 'echart':
-                        object=this.getCanvas(item.json);
-                    default:
-                        break;
-                }
+            switch (json.data.type){
+                case 'Line':
+                    //[终止位置，线长，起始位置，top]
+                    object=new fabric.Line([left,json.width,left,top],json)
+                    break;
+                case 'Echart':
+                    object=this.getCanvas(json);
+                    break;
+                default:
+                    object= new fabric[json.data.type](json);
+                    break;
             }
             this.addObject(object);
         },
@@ -331,7 +312,7 @@ export default {
             canvas.width=json.width?json.width:100;
             canvas.height=json.height?json.height:100;
             var myChart = echarts.init(canvas);
-            var options=json.options||{}
+            var options=json.data.options||{}
             myChart.setOption(options, true);
             var LabeledRect = fabric.util.createClass(fabric.Rect, {
                 type: 'labeledRect',
@@ -348,7 +329,7 @@ export default {
                 _render: function(ctx) {
                     this.callSuper('_render', ctx);
                     var offcanvas = myChart.getRenderedCanvas({
-                        pixelRatio: 1,
+                        pixelRatio: 2,
                         backgroundColor:""
                     });
                     //在画布上定位图像，并规定图像的宽度和高度： ctx.drawImage(img,x,y,width,height);
@@ -359,8 +340,11 @@ export default {
         },
         //保存
         saveDesign:function(){
-            sessionStorage.setItem("canvasDesign",JSON.stringify(this.design.toJSON()))
+            //canvas.item(0).sourcePath = '/assets/dragon.svg';
+            sessionStorage.setItem("canvasDesign",JSON.stringify(this.design.toDatalessJSON()))
             console.log(JSON.stringify(this.design.toJSON()))
+            console.log(JSON.stringify(this.design))
+            console.log(JSON.stringify(this.design.toDatalessJSON()))
             this.$notify.success("保存成功！");
         },
         clearDesign:function(){
