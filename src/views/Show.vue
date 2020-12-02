@@ -186,21 +186,23 @@ export default {
 
                 for(let i=0;i<_this.originalObj.length;i++){
                     rect = _this.originalObj[i];
-                    switch (rect.data.type){
-                        case 'Line':
-                            //[终止位置，线长，起始位置，top]
-                            object=new fabric.Line([left,rect.width,left,top],rect)
-                            break;
-                        case 'Echart':
-                            object=this.getCanvas(rect,zoom);
-                            break;
-                        default:
-                            object= new fabric[rect.data.type](rect);
-                            break;
+                    console.log(rect)
+                    if(rect.data&&rect.data.type){
+                        switch (rect.data.type){
+                            case 'Line':
+                                //[终止位置，线长，起始位置，top]
+                                object=new fabric.Line([left,rect.width,left,top],rect)
+                                break;
+                            case 'Echart':
+                                object=this.getCanvas(rect,zoom);
+                                break;
+                            default:
+                                object= new fabric[rect.data.type](rect);
+                                break;
+                        }
+                        this.addObject(object);
                     }
-                    this.addObject(object);
                 }
-                console.log(this.design.getObjects())
             }
     
 

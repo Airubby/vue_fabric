@@ -155,6 +155,14 @@ export default {
                             width: 100, 
                             height: 100, 
                             fill:"transparent",
+                        },
+                        {
+                            width:100,
+                            height:100,
+                            data:{
+                                id:"e123456",name:"自定义",icon:'el-icon-s-marketing',type:'Svg',
+                                url:"images/wechat.svg"
+                            }
                         }
                     ]
                 }
@@ -291,13 +299,19 @@ export default {
                 case 'Echart':
                     object=this.getCanvas(json);
                     break;
+                case 'Svg':
+                    this.getSvg(json);
+                    break;
                 default:
                     object= new fabric[json.data.type](json);
                     break;
             }
-            this.addObject(object);
+            if(object!=""){
+                this.addObject(object);
+            }
         },
         addObject:function(object){
+            console.log("!!!!!!!!!!!")
             let _this=this;
             object.toObject = (function (toObject) {//赋值自定义属性
                 return function (properties) {
@@ -338,7 +352,16 @@ export default {
                     ctx.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
                 }
             });
+            console.log(new LabeledRect(json))
             return new LabeledRect(json);
+        },
+        getSvg:function(json){
+            let _this=this;
+            new fabric.Image.fromURL("images/wechat.svg", function(object){
+                object["data"]=json.data;
+                console.log(object)
+                _this.design.add(object)
+            });
         },
         //保存
         saveDesign:function(){
@@ -350,6 +373,32 @@ export default {
             this.$notify.success("保存成功！");
         },
         clearDesign:function(){
+            let _this=this;
+            
+            var bgnd = new fabric.Image.fromURL("images/wechat.svg", function(oImg){
+                console.log(oImg)
+                _this.design.add(oImg);
+                // oImg.hasBorders = false;
+                // oImg.hasControls = false;
+                // // ... Modify other attributes
+                // canvas.insertAt(oImg,0);
+            });
+            // fabric.loadSVGFromURL('images/wechat.svg', function (objects, options) {
+            //     console.log(objects)
+            //     console.log(options)
+            //     let img1 = new fabric.Path(objects[0].d, {
+            //         fill: '#333',
+            //         opacity: 1,
+            //         hasBorders: true,
+            //         hasControls: true,
+            //         hasRotatingPoint: true,
+            //         selectable: true,
+            //         preserveObjectStacking: true,
+            //         objectCaching: false,
+            //     });
+            //     console.log(img1)
+            //     _this.design.add(img1)
+            // })
             console.log(this.design)
             // console.log(this.design.getObjects())
         },
