@@ -108,6 +108,19 @@ export default {
             object.set('selectable', false);  //设置禁止编辑
             this.design.add(object);
         },
+        getSvg:function(json){
+            console.log(json)
+            let _this=this;
+            new fabric.Image.fromURL("images/wechat.svg", function(object){
+                object["data"]=json.data;
+                console.log(object)
+                object.scale(1).set({
+                    left: json.left,
+                    top: json.top,
+                });
+                _this.addObject(object)
+            });
+        },
         getCanvas:function(json,zoom){
             let _this=this;
             var canvas=document.createElement("canvas");
@@ -142,14 +155,14 @@ export default {
         },
         resizeCanvas:function() {
             let dom=document.getElementById("canvas-box");
-            this.design.setWidth(dom.offsetWidth);
+            this.design.setWidth(dom.offsetWidth);
             this.design.setHeight(dom.offsetHeight);
             //先还原缩放比例与位置
             this.design.setZoom(1);
             this.design.absolutePan({x:0, y:0});
-            //缩放移动视图，使其适应Canvas大小
-            this.zoomToFitCanvas();
-        },
+            //缩放移动视图，使其适应Canvas大小
+            this.zoomToFitCanvas();
+        },
         //缩放移动视图，使其适应Canvas大小
         zoomToFitCanvas:function() {
             let _this=this;
@@ -196,6 +209,9 @@ export default {
                             case 'Echart':
                                 object=this.getCanvas(rect,zoom);
                                 break;
+                            case 'Svg':
+                                this.getSvg(rect);
+                                break;
                             default:
                                 object= new fabric[rect.data.type](rect);
                                 break;
@@ -204,10 +220,8 @@ export default {
                     }
                 }
             }
-    
-
         },
-
+        
         //test
         test:function(){
             this.objects = this.design.getObjects();

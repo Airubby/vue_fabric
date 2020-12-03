@@ -5,6 +5,9 @@
                 <img src="/images/logo.png">
             </div>
             <div class="btn">
+                <el-tooltip class="item" content="更改图片" placement="top-end">
+                    <span @click="changeImg"><i class="el-icon-picture-outline"></i></span>
+                </el-tooltip>
                 <el-tooltip class="item" content="设计预览" placement="top-end">
                     <span @click="showDesign"><i class="el-icon-view"></i></span>
                 </el-tooltip>
@@ -168,6 +171,7 @@ export default {
                 }
             ],
             zoomPoint:"",//中心点
+            zoom:1, //缩放比例
             viewportTransform:null, //拖动画布后，存的距离上左的间距arr[0]比率；arr[4]左右移动的距离；arr[5]上下移动距离
             design:"",
        }
@@ -215,14 +219,13 @@ export default {
             
             _this.design.on('mouse:wheel', function(opt) {
                 console.log(this)
-                var zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
                 var delta = opt.e.deltaY;
-                var zoom = _this.design.getZoom();
-                zoom *= 0.999 ** delta;
-                if (zoom > 20) zoom = 20;
-                if (zoom < 0.01) zoom = 0.01;
-                this.zoomToPoint(zoomPoint, zoom);
-                // this.setZoom(zoom);
+                _this.zoom = _this.design.getZoom();
+                _this.zoom *= 0.999 ** delta;
+                if (_this.zoom > 20) _this.zoom = 20;
+                if (_this.zoom < 0.01) _this.zoom = 0.01;
+                this.zoomToPoint(_this.zoomPoint, _this.zoom);
+                // this.setZoom(_this.zoom);
                 opt.e.preventDefault();
                 opt.e.stopPropagation();
                 _this.viewportTransform=this.viewportTransform;
@@ -276,19 +279,19 @@ export default {
             ev.preventDefault();
         },
         drop:function(ev){
+            var object="";
+            // //开始缩放
+            this.design.zoomToPoint(this.zoomPoint, this.zoom);
+
             var json=JSON.parse(ev.dataTransfer.getData("item"));
             var left=ev.offsetX;
             var top=ev.offsetY;
             //viewportTransform[0] 存的缩放比例；viewportTransform[4]X轴移动距离；this.viewportTransform[5]Y轴移动距离
             if(this.viewportTransform){
-                left=left/this.viewportTransform[0]-this.viewportTransform[4];
-                top=top/this.viewportTransform[0]-this.viewportTransform[5];
+                left=(left-this.viewportTransform[4])/this.zoom;
+                top=(top-this.viewportTransform[5])/this.zoom;
+                
             }
-            var object="";
-            var zoomPoint = new fabric.Point(this.design.width / 2 , this.design.height / 2);
-            //开始缩放
-            this.design.zoomToPoint(zoomPoint, 1);
-            // var json=item;
             json.left=left;
             json.top=top;
             switch (json.data.type){
@@ -311,7 +314,6 @@ export default {
             }
         },
         addObject:function(object){
-            console.log("!!!!!!!!!!!")
             let _this=this;
             object.toObject = (function (toObject) {//赋值自定义属性
                 return function (properties) {
@@ -360,45 +362,26 @@ export default {
             new fabric.Image.fromURL("images/wechat.svg", function(object){
                 object["data"]=json.data;
                 console.log(object)
-                _this.design.add(object)
+                object.set({
+                    left: json.left,
+                    top: json.top,
+                });
+                _this.addObject(object)
             });
+        },
+        changeImg:function(){
+            console.log(this.design)
         },
         //保存
         saveDesign:function(){
             //canvas.item(0).sourcePath = '/assets/dragon.svg';
             sessionStorage.setItem("canvasDesign",JSON.stringify(this.design.toDatalessJSON()))
             console.log(JSON.stringify(this.design.toJSON()))
-            console.log(JSON.stringify(this.design))
-            console.log(JSON.stringify(this.design.toDatalessJSON()))
             this.$notify.success("保存成功！");
         },
         clearDesign:function(){
             let _this=this;
             
-            var bgnd = new fabric.Image.fromURL("images/wechat.svg", function(oImg){
-                console.log(oImg)
-                _this.design.add(oImg);
-                // oImg.hasBorders = false;
-                // oImg.hasControls = false;
-                // // ... Modify other attributes
-                // canvas.insertAt(oImg,0);
-            });
-            // fabric.loadSVGFromURL('images/wechat.svg', function (objects, options) {
-            //     console.log(objects)
-            //     console.log(options)
-            //     let img1 = new fabric.Path(objects[0].d, {
-            //         fill: '#333',
-            //         opacity: 1,
-            //         hasBorders: true,
-            //         hasControls: true,
-            //         hasRotatingPoint: true,
-            //         selectable: true,
-            //         preserveObjectStacking: true,
-            //         objectCaching: false,
-            //     });
-            //     console.log(img1)
-            //     _this.design.add(img1)
-            // })
             console.log(this.design)
             // console.log(this.design.getObjects())
         },
