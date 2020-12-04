@@ -11,8 +11,8 @@
                 <el-tooltip class="item" content="设计预览" placement="top-end">
                     <span @click="showDesign"><i class="el-icon-view"></i></span>
                 </el-tooltip>
-                <el-tooltip class="item" content="清空画布" placement="top-end">
-                    <span @click="clearDesign"><i class="el-icon-folder-delete"></i></span>
+                <el-tooltip class="item" content="删除对象" placement="top-end">
+                    <span @click="removeObject"><i class="el-icon-folder-delete"></i></span>
                 </el-tooltip>
                 <el-tooltip class="item" content="保存操作(Ctrl+s)" placement="top-end">
                     <span @click="saveDesign"><i class="el-icon-folder-checked"></i></span>
@@ -56,7 +56,7 @@ export default {
     },
     data() {
        return {
-            activeItem: 'first',
+            activeItem: 'second',
             List:[
                 {
                     title:"基本图形",
@@ -97,9 +97,15 @@ export default {
                         {
                             data:{
                                 id:"e123456",name:"自定义",icon:'el-icon-s-marketing',type:'Echart',
+                                value:1,width:10,
+                                handle:[`data.options.series.axisLine.lineStyle.width=data.width;`,`data.options.series.data[0].value=data.value;`],
+                                // `function(options,data){
+                                //     options.series.axisLine.lineStyle.width=data.width;
+                                //     options.series.data.value=data.value;
+                                // }`,
                                 options:{
                                     title:{
-                                        text:"title",  
+                                        text:"",  
                                         bottom: 15,
                                         x:'center',
                                         textStyle:{
@@ -107,52 +113,50 @@ export default {
                                             fontSize:'16'
                                         },
                                     },
-                                    series: [
-                                        {
-                                            name: "title",
-                                            type: 'gauge',
-                                            radius:'70%',
-                                            min:1,
-                                            max:3,
-                                            splitNumber:0,
-                                            axisLine:{
-                                                lineStyle:{
-                                                    color:[[0.5, "#00AB6F"],[1, "#E4E5ED"]],
-                                                    width:'10',
-                                                }
+                                    series: {
+                                        name: "title",
+                                        type: 'gauge',
+                                        radius:'99%',
+                                        min:1,
+                                        max:3,
+                                        splitNumber:0,
+                                        axisLine:{
+                                            lineStyle:{
+                                                color:[[0.5, "#00AB6F"],[1, "#E4E5ED"]],
+                                                width:10,
+                                            }
+                                        },
+                                        splitLine:{
+                                            show:false
+                                        },
+                                        axisTick:{
+                                            show:false
+                                        },
+                                        axisLabel:{
+                                            show:false
+                                        },
+                                        pointer:{
+                                            length:'75%',
+                                            width:'0.1%'
+                                        },
+                                        itemStyle:{
+                                            normal:{
+                                                color:'transparent'
+                                            }
+                                        },
+                                        detail: {
+                                            show: true,
+                                            textStyle: {
+                                                fontSize: 26,
+                                                color:'#fff',
                                             },
-                                            splitLine:{
-                                                show:false
-                                            },
-                                            axisTick:{
-                                                show:false
-                                            },
-                                            axisLabel:{
-                                                show:false
-                                            },
-                                            pointer:{
-                                                length:'75%',
-                                                width:'0.1%'
-                                            },
-                                            itemStyle:{
-                                                normal:{
-                                                    color:'transparent'
-                                                }
-                                            },
-                                            detail: {
-                                                    show: true,
-                                                    textStyle: {
-                                                        fontSize: 26,
-                                                        color:'#fff',
-                                                    },
-                                                    formatter: '{value}',
-                                                    offsetCenter: ['0%', '0%'],
-                                                    
+                                            formatter: '{value}',
+                                            offsetCenter: ['0%', '0%'],
+                                            
 
-                                                },
-                                            data: [{value: 1.5}]
-                                        }
-                                    ]
+                                        },
+                                        data: [{value: 1.5}]
+                                    }
                                 }
                             },
                             width: 100, 
@@ -160,10 +164,10 @@ export default {
                             fill:"transparent",
                         },
                         {
-                            width:100,
-                            height:100,
+                            width:50,
+                            height:50,
                             data:{
-                                id:"e123456",name:"自定义",icon:'el-icon-s-marketing',type:'Svg',
+                                id:"f123456",name:"自定义",icon:'el-icon-s-marketing',type:'Svg',
                                 url:"images/wechat.svg"
                             }
                         }
@@ -185,17 +189,20 @@ export default {
             _this.design.setWidth(dom.offsetWidth);
             _this.design.setHeight(dom.offsetHeight);
             this.zoomPoint = new fabric.Point(_this.design.width / 2 , _this.design.height / 2);
-            window.onresize=function(){
-                _this.design.setWidth(dom.offsetWidth);
-                _this.design.setHeight(dom.offsetHeight);
-            };
+            // window.onresize=function(){
+            //     _this.design.setWidth(dom.offsetWidth);
+            //     _this.design.setHeight(dom.offsetHeight);
+            //     console.log(_this.design)
+            //     // _this.design.zoomToPoint(_this.zoomPoint, _this.zoom);
+            //     // _this.design.requestRenderAll();
+            // };
             document.onkeydown=function(event){
                 if (_this && _this._isDestroyed) {return}  //摧毁组件了就不执行下面了，不然其他地方input框又可能不能输入下面的快捷键
                 var ev = event || window.event || arguments.callee.caller.arguments[0];
                 if(ev){
                     switch(ev.keyCode){
                         case 46 :// 点击删除
-                            _this.removeDevice();
+                            _this.removeObject();
                             break;
                         case 90:
                             if(ev.ctrlKey){ //撤销 ctrl+z
@@ -325,15 +332,19 @@ export default {
             this.design.add(object);
         },
         getCanvas:function(json){
-            console.log(json)
             var canvas=document.createElement("canvas");
-            canvas.width=json.width?json.width:100;
-            canvas.height=json.height?json.height:100;
+            canvas.width=json.width?json.width*this.zoom:100;
+            canvas.height=json.height?json.height*this.zoom:100;
             var myChart = echarts.init(canvas);
-            var options=json.data.options||{}
-            myChart.setOption(options, true);
-            var LabeledRect = fabric.util.createClass(fabric.Rect, {
-                type: 'labeledRect',
+            var data=json.data||{}
+            if(data.hasOwnProperty("handle")){
+                for(let i=0;i<json.data.handle.length;i++){
+                    eval(data.handle[i]);
+                }
+            }
+            myChart.setOption(data.options, true);
+            var CanvasRect = fabric.util.createClass(fabric.Rect, {
+                type: 'canvasRect',
                 initialize: function(options) {
                     options || (options = { });
                     this.callSuper('initialize', options);
@@ -354,23 +365,69 @@ export default {
                     ctx.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
                 }
             });
-            console.log(new LabeledRect(json))
-            return new LabeledRect(json);
+            console.log(new CanvasRect(json))
+            return new CanvasRect(json);
         },
         getSvg:function(json){
             let _this=this;
-            new fabric.Image.fromURL("images/wechat.svg", function(object){
-                object["data"]=json.data;
+            new fabric.Image.fromURL(json.data.url, function(object){
                 console.log(object)
+                object["data"]=json.data;
                 object.set({
                     left: json.left,
                     top: json.top,
+                    scaleX:json.width/object.width,
+                    scaleY:json.height/object.height
                 });
                 _this.addObject(object)
             });
         },
         changeImg:function(){
-            console.log(this.design)
+            let _this=this;
+            let objects=this.design.getObjects();
+            for(let i=0;i<objects.length;i++){
+                //更改图片
+                if(objects[i].data.id=="f123456"){
+                    let imgsrc="images/runstatus.svg";
+                    fabric.util.loadImage(imgsrc, function (img) {
+                        objects[i].data.url=imgsrc;
+                        //图片才有_element属性
+                        objects[i]._element.attributes[0].nodeValue=imgsrc;
+                        objects[i].set({
+                            scaleX:objects[i].width*objects[i].scaleX/img.width,
+                            scaleY:objects[i].height*objects[i].scaleY/img.height
+                        })
+                        _this.design.renderAll()
+                    });
+                }else if(objects[i].data.id=="e123456"){
+                    //更改canvas
+                    let obj={
+                        width:objects[i].width,
+                        height:objects[i].height,
+                        data:objects[i].data
+                    };
+                    obj.data.value=2.5;
+                    let object=this.getCanvas(obj);
+                    console.log(object)
+                    this.design.remove(objects[i]);
+                    setTimeout(() => {
+                        this.addObject(object);
+                    }, 3000);
+                    // this.addObject(object);
+                }
+
+            }
+            
+        },
+        //删除对象
+        removeObject:function(){
+            this.$confirm("确定删除？","提示",{
+                confirmButtonText:"确定",
+                cancelButtonText:"取消",
+                type:"warning"
+            }).then(()=>{
+                this.design.remove(this.design.getActiveObject());
+            })
         },
         //保存
         saveDesign:function(){
@@ -378,12 +435,6 @@ export default {
             sessionStorage.setItem("canvasDesign",JSON.stringify(this.design.toDatalessJSON()))
             console.log(JSON.stringify(this.design.toJSON()))
             this.$notify.success("保存成功！");
-        },
-        clearDesign:function(){
-            let _this=this;
-            
-            console.log(this.design)
-            // console.log(this.design.getObjects())
         },
         //查看
         showDesign:function(){

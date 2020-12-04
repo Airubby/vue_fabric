@@ -129,8 +129,8 @@ export default {
             var myChart = echarts.init(canvas,null,{devicePixelRatio:2});
             var options=json.data.options||{}
             myChart.setOption(options, true);
-            var LabeledRect = fabric.util.createClass(fabric.Rect, {
-                type: 'labeledRect',
+            var CanvasRect = fabric.util.createClass(fabric.Rect, {
+                type: 'canvasRect',
                 initialize: function(options) {
                     options || (options = { });
                     this.callSuper('initialize', options);
@@ -151,7 +151,7 @@ export default {
                     ctx.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
                 }
             });
-            return new LabeledRect(json);
+            return new CanvasRect(json);
         },
         resizeCanvas:function() {
             let dom=document.getElementById("canvas-box");
