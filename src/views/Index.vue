@@ -335,6 +335,7 @@ export default {
             var canvas=document.createElement("canvas");
             canvas.width=json.width?json.width*this.zoom:100;
             canvas.height=json.height?json.height*this.zoom:100;
+            console.log(canvas)
             var myChart = echarts.init(canvas);
             var data=json.data||{}
             if(data.hasOwnProperty("handle")){
@@ -386,34 +387,50 @@ export default {
             let _this=this;
             let objects=this.design.getObjects();
             for(let i=0;i<objects.length;i++){
-                //更改图片
-                if(objects[i].data.id=="f123456"){
-                    let imgsrc="images/runstatus.svg";
-                    fabric.util.loadImage(imgsrc, function (img) {
-                        objects[i].data.url=imgsrc;
-                        //图片才有_element属性
-                        objects[i]._element.attributes[0].nodeValue=imgsrc;
-                        objects[i].set({
-                            scaleX:objects[i].width*objects[i].scaleX/img.width,
-                            scaleY:objects[i].height*objects[i].scaleY/img.height
-                        })
-                        _this.design.renderAll()
-                    });
-                }else if(objects[i].data.id=="e123456"){
-                    //更改canvas
-                    let obj={
+                // //更改图片
+                // if(objects[i].data.id=="f123456"){
+                //     let imgsrc="images/runstatus.svg";
+                //     fabric.util.loadImage(imgsrc, function (img) {
+                //         objects[i].data.url=imgsrc;
+                //         //图片才有_element属性
+                //         objects[i]._element.attributes[0].nodeValue=imgsrc;
+                //         objects[i].set({
+                //             scaleX:objects[i].width*objects[i].scaleX/img.width,
+                //             scaleY:objects[i].height*objects[i].scaleY/img.height
+                //         })
+                //         _this.design.renderAll()
+                //     });
+                // }
+
+                //更改canvas
+                if(objects[i].data.id=="e123456"){
+                    console.log(objects[i])
+                    console.log(this.zoom)
+                    let json={
                         width:objects[i].width,
                         height:objects[i].height,
                         data:objects[i].data
                     };
-                    obj.data.value=2.5;
-                    let object=this.getCanvas(obj);
-                    console.log(object)
-                    this.design.remove(objects[i]);
-                    setTimeout(() => {
-                        this.addObject(object);
-                    }, 3000);
-                    // this.addObject(object);
+                    json.data.value=2.5;
+
+                    var canvas=document.createElement("canvas");
+                    canvas.width=json.width;
+                    canvas.height=json.height;
+                    console.log(canvas)
+                    var myChart = echarts.init(canvas);
+                    var data=json.data||{}
+                    if(data.hasOwnProperty("handle")){
+                        for(let i=0;i<json.data.handle.length;i++){
+                            eval(data.handle[i]);
+                        }
+                    }
+                    myChart.setOption(data.options, true);
+                    var offcanvas = myChart.getRenderedCanvas({
+                        pixelRatio: 2,
+                        backgroundColor:""
+                    });
+                    objects[i].set("_cacheCanvas",offcanvas);
+                    this.design.renderAll();
                 }
 
             }
