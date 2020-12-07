@@ -51,7 +51,7 @@ export default {
     mounted() {
         let _this=this;
         this.init();
-        
+        console.log(fabric.util)
 
     },
     data() {
@@ -392,7 +392,7 @@ export default {
                 //     let imgsrc="images/runstatus.svg";
                 //     fabric.util.loadImage(imgsrc, function (img) {
                 //         objects[i].data.url=imgsrc;
-                //         //图片才有_element属性
+                //         //图片才有_element属性 object._element.src = src;
                 //         objects[i]._element.attributes[0].nodeValue=imgsrc;
                 //         objects[i].set({
                 //             scaleX:objects[i].width*objects[i].scaleX/img.width,
@@ -411,7 +411,7 @@ export default {
                         height:objects[i].height,
                         data:objects[i].data
                     };
-                    json.data.value=2.5;
+                    json.data.value=5.2;
 
                     var canvas=document.createElement("canvas");
                     canvas.width=json.width;
@@ -429,7 +429,8 @@ export default {
                         pixelRatio: 2,
                         backgroundColor:""
                     });
-                    objects[i].set("_cacheCanvas",offcanvas);
+                    objects[i]._cacheContext.clearRect(-(json.width/2),-(json.height/2),json.width,json.height);
+                    objects[i]._cacheContext.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
                     this.design.renderAll();
                 }
 
