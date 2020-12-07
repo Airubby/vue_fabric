@@ -43,7 +43,8 @@
 
 <script>
 import { fabric } from "fabric";
-import echarts from 'echarts'
+import echarts from 'echarts';
+var _ = require('lodash');
 export default {
     created () {
 
@@ -167,7 +168,7 @@ export default {
                             width:50,
                             height:50,
                             data:{
-                                id:"f123456",name:"自定义",icon:'el-icon-s-marketing',type:'Svg',
+                                name:"自定义",icon:'el-icon-s-marketing',type:'Svg',
                                 url:"images/wechat.svg"
                             }
                         }
@@ -301,6 +302,7 @@ export default {
             }
             json.left=left;
             json.top=top;
+            json.data["id"]=_.uniqueId('uuid_');
             switch (json.data.type){
                 case 'Line':
                     //[终止位置，线长，起始位置，top]
@@ -385,67 +387,76 @@ export default {
         },
         changeImg:function(){
             let _this=this;
-            let objects=this.design.getObjects();
-            for(let i=0;i<objects.length;i++){
-                // //更改图片
-                // if(objects[i].data.id=="f123456"){
-                //     let imgsrc="images/runstatus.svg";
-                //     fabric.util.loadImage(imgsrc, function (img) {
-                //         objects[i].data.url=imgsrc;
-                //         //图片才有_element属性 object._element.src = src;
-                //         objects[i]._element.attributes[0].nodeValue=imgsrc;
-                //         objects[i].set({
-                //             scaleX:objects[i].width*objects[i].scaleX/img.width,
-                //             scaleY:objects[i].height*objects[i].scaleY/img.height
-                //         })
-                //         _this.design.renderAll()
-                //     });
-                // }
-
-                //更改canvas
-                if(objects[i].data.id=="e123456"){
-                    console.log(objects[i])
-                    console.log(this.zoom)
-                    let json={
-                        width:objects[i].width,
-                        height:objects[i].height,
-                        data:objects[i].data
-                    };
-                    json.data.value=5.2;
-
-                    var canvas=document.createElement("canvas");
-                    canvas.width=json.width;
-                    canvas.height=json.height;
-                    console.log(canvas)
-                    var myChart = echarts.init(canvas);
-                    var data=json.data||{}
-                    if(data.hasOwnProperty("handle")){
-                        for(let i=0;i<json.data.handle.length;i++){
-                            eval(data.handle[i]);
-                        }
+            if(this.design.getActiveObject()){
+                let objects=this.design.getObjects();
+                let id=this.design.getActiveObject().data.id;
+                for(let i=0;i<objects.length;i++){
+                    // //更改图片
+                    if(objects[i].data.id==id&&objects[i].data.type=="Svg"){
+                        console.log(objects[i])
+                        let imgsrc="images/runstatus.svg";
+                        fabric.util.loadImage(imgsrc, function (img) {
+                            objects[i].data.url=imgsrc;
+                            //图片才有_element属性
+                            // objects[i]._element.src=imgsrc;
+                            objects[i]._element.attributes[0].nodeValue=imgsrc
+                            objects[i].set({
+                                scaleX:objects[i].width*objects[i].scaleX/img.width,
+                                scaleY:objects[i].height*objects[i].scaleY/img.height
+                            })
+                            _this.design.renderAll()
+                        });
                     }
-                    myChart.setOption(data.options, true);
-                    var offcanvas = myChart.getRenderedCanvas({
-                        pixelRatio: 2,
-                        backgroundColor:""
-                    });
-                    objects[i]._cacheContext.clearRect(-(json.width/2),-(json.height/2),json.width,json.height);
-                    objects[i]._cacheContext.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
-                    this.design.renderAll();
-                }
 
+                    //更改canvas
+                    if(objects[i].data.id==id&&objects[i].data.type=="Echart"){
+                        console.log(objects[i])
+                        console.log(this.zoom)
+                        let json={
+                            width:objects[i].width,
+                            height:objects[i].height,
+                            data:objects[i].data
+                        };
+                        json.data.value=5.2;
+
+                        var canvas=document.createElement("canvas");
+                        canvas.width=json.width;
+                        canvas.height=json.height;
+                        console.log(canvas)
+                        var myChart = echarts.init(canvas);
+                        var data=json.data||{}
+                        if(data.hasOwnProperty("handle")){
+                            for(let i=0;i<json.data.handle.length;i++){
+                                eval(data.handle[i]);
+                            }
+                        }
+                        myChart.setOption(data.options, true);
+                        var offcanvas = myChart.getRenderedCanvas({
+                            pixelRatio: 2,
+                            backgroundColor:""
+                        });
+                        objects[i]._cacheContext.clearRect(-(json.width/2),-(json.height/2),json.width,json.height);
+                        objects[i]._cacheContext.drawImage(offcanvas,-(json.width/2),-(json.height/2),json.width,json.height);
+                        this.design.renderAll();
+                    }
+
+                }
             }
-            
         },
         //删除对象
         removeObject:function(){
-            this.$confirm("确定删除？","提示",{
-                confirmButtonText:"确定",
-                cancelButtonText:"取消",
-                type:"warning"
-            }).then(()=>{
-                this.design.remove(this.design.getActiveObject());
-            })
+            if(this.design.getActiveObject()){
+                this.$confirm("确定删除？","提示",{
+                    confirmButtonText:"确定",
+                    cancelButtonText:"取消",
+                    type:"warning"
+                }).then(()=>{
+                    this.design.remove(this.design.getActiveObject());
+                })
+            }else{
+                this.$notify.warning("请选择需要删除的对象");
+            }
+            
         },
         //保存
         saveDesign:function(){
