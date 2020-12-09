@@ -33,7 +33,7 @@
                     </el-collapse>
                 </el-scrollbar>
             </div>
-            <div class="fabric-body" id="canvas-box" @drop='drop($event)' @touchstart='drop($event)'  @dragover='allowDrop($event)'>
+            <div class="fabric-body" id="canvas-box" @drop='drop($event)' @touchstart='drop($event)' @dragover='allowDrop($event)'>
                 <canvas id="designCanvas"></canvas>
             </div>
         </div>
@@ -45,6 +45,7 @@
 import { fabric } from "fabric";
 import echarts from 'echarts';
 var _ = require('lodash');
+import uuid from 'uuid-random';
 export default {
     created () {
 
@@ -65,7 +66,6 @@ export default {
                     data:[
                         {
                             data:{
-                                id:"a123456",
                                 name:"矩形",
                                 icon:'el-icon-s-marketing',
                                 type:'Rect',
@@ -74,15 +74,15 @@ export default {
                             fill: 'rgba(255,0,0,0.5)'
                         },{
                             
-                            data:{id:"b123456",name:"圆形",icon:'el-icon-s-marketing',type:'Circle'},
+                            data:{name:"圆形",icon:'el-icon-s-marketing',type:'Circle'},
                             radius: 50, left: 12, top: 12, fill: '#aac'
                         },
                         {
                             width: 100, height: 100, fill: '#cca',
-                            data:{id:"c123456",name:"三角形",icon:'el-icon-s-marketing',type:'Triangle'},
+                            data:{name:"三角形",icon:'el-icon-s-marketing',type:'Triangle'},
                             
                         },{
-                            data:{id:"d123456",name:"直线",icon:'el-icon-s-marketing',type:'Line'},
+                            data:{name:"直线",icon:'el-icon-s-marketing',type:'Line'},
                             fill: '#5E2300',
                             stroke: '#5E2300',
                             strokeWidth: 10,
@@ -97,13 +97,9 @@ export default {
                     data:[
                         {
                             data:{
-                                id:"e123456",name:"自定义",icon:'el-icon-s-marketing',type:'Echart',
+                                name:"自定义",icon:'el-icon-s-marketing',type:'Echart',
                                 value:1,width:10,
                                 handle:[`data.options.series.axisLine.lineStyle.width=data.width;`,`data.options.series.data[0].value=data.value;`],
-                                // `function(options,data){
-                                //     options.series.axisLine.lineStyle.width=data.width;
-                                //     options.series.data.value=data.value;
-                                // }`,
                                 options:{
                                     title:{
                                         text:"",  
@@ -169,7 +165,7 @@ export default {
                             height:50,
                             data:{
                                 name:"自定义",icon:'el-icon-s-marketing',type:'Svg',
-                                url:"images/wechat.svg"
+                                imgsrc:"images/wechat.svg"
                             }
                         }
                     ]
@@ -302,7 +298,7 @@ export default {
             }
             json.left=left;
             json.top=top;
-            json.data["id"]=_.uniqueId('uuid_');
+            json.data["uuid"]=uuid();
             switch (json.data.type){
                 case 'Line':
                     //[终止位置，线长，起始位置，top]
@@ -373,15 +369,17 @@ export default {
         },
         getSvg:function(json){
             let _this=this;
-            new fabric.Image.fromURL(json.data.url, function(object){
+            fabric.Image.fromURL(json.data.imgsrc, function(object){
                 console.log(object)
                 object["data"]=json.data;
                 object.set({
                     left: json.left,
                     top: json.top,
-                    scaleX:json.width/object.width,
-                    scaleY:json.height/object.height
+                    // scaleX:json.width/object.width,
+                    // scaleY:json.height/object.height
                 });
+                object.scaleToWidth(json.width);
+                object.scaleToHeight(json.height);
                 _this.addObject(object)
             });
         },
@@ -389,27 +387,30 @@ export default {
             let _this=this;
             if(this.design.getActiveObject()){
                 let objects=this.design.getObjects();
-                let id=this.design.getActiveObject().data.id;
+                let uuid=this.design.getActiveObject().data.uuid;
                 for(let i=0;i<objects.length;i++){
                     // //更改图片
-                    if(objects[i].data.id==id&&objects[i].data.type=="Svg"){
+                    if(objects[i].data.uuid==uuid&&objects[i].data.type=="Svg"){
                         console.log(objects[i])
                         let imgsrc="images/runstatus.svg";
-                        fabric.util.loadImage(imgsrc, function (img) {
-                            objects[i].data.url=imgsrc;
-                            //图片才有_element属性
-                            // objects[i]._element.src=imgsrc;
-                            objects[i]._element.attributes[0].nodeValue=imgsrc
-                            objects[i].set({
-                                scaleX:objects[i].width*objects[i].scaleX/img.width,
-                                scaleY:objects[i].height*objects[i].scaleY/img.height
-                            })
-                            _this.design.renderAll()
+                        let json=objects[i];
+                        json.data.imgsrc=imgsrc;
+                        fabric.Image.fromURL(imgsrc, function(object){
+                            console.log(object)
+                            object["data"]=json.data;
+                            object.set({
+                                left: json.left,
+                                top: json.top,
+                            });
+                            object.scaleToWidth(objects[i].width*objects[i].scaleX);
+                            object.scaleToHeight(objects[i].height*objects[i].scaleY);
+                            _this.design.remove(json);
+                            _this.addObject(object);
                         });
                     }
 
                     //更改canvas
-                    if(objects[i].data.id==id&&objects[i].data.type=="Echart"){
+                    if(objects[i].data.uuid==uuid&&objects[i].data.type=="Echart"){
                         console.log(objects[i])
                         console.log(this.zoom)
                         let json={
@@ -532,7 +533,7 @@ export default {
             /deep/ .el-collapse-item__header {
                 background: #0A3B79;
                 color: #fff;
-                border: none;
+                border-bottom-color: #073474;
                 padding-left: 20px;
             }
             /deep/ .el-collapse-item__wrap{
