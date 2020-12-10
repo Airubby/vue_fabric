@@ -44,8 +44,8 @@
 <script>
 import { fabric } from "fabric";
 import echarts from 'echarts';
-var _ = require('lodash');
 import uuid from 'uuid-random';
+import 'fabric-history';
 export default {
     created () {
 
@@ -81,13 +81,23 @@ export default {
                             width: 100, height: 100, fill: '#cca',
                             data:{name:"三角形",icon:'el-icon-s-marketing',type:'Triangle'},
                             
-                        },{
+                        },
+                        {
                             data:{name:"直线",icon:'el-icon-s-marketing',type:'Line'},
                             fill: '#5E2300',
                             stroke: '#5E2300',
                             strokeWidth: 10,
                             width: 100, 
                            
+                        },
+                        {
+                            data:{name:"文字",icon:'el-icon-s-marketing',type:'IText'},
+                            lockScalingFlip: true, // 不能通过缩放为负值来翻转对象
+                            lockUniScaling: false, // 对象非均匀缩放被锁定
+                            fontSize:16,
+                            padding: 5,
+                            fontFamily:'arial black',
+                            fill: '#ff0000',
                         }
                     ]
                 },
@@ -203,12 +213,12 @@ export default {
                             break;
                         case 90:
                             if(ev.ctrlKey){ //撤销 ctrl+z
-                                _this.backout();
+                                _this.design.undo();
                             }
                             break;
                         case 89:
                             if(ev.ctrlKey){ //反撤销  ctrl+y
-                            _this.returnBackout();
+                                _this.design.redo();
                             }
                             break;
                         case 83:
@@ -303,6 +313,9 @@ export default {
                 case 'Line':
                     //[终止位置，线长，起始位置，top]
                     object=new fabric.Line([left,json.width,left,top],json)
+                    break;
+                case 'IText':
+                    object=new fabric.IText('文字信息',json)
                     break;
                 case 'Echart':
                     object=this.getCanvas(json);
@@ -516,7 +529,7 @@ export default {
             .collapse-con{
                 padding: 15px 10px 0;
                 display: flex;
-                flex-wrap: nowrap;
+                flex-wrap: wrap;
                 span{
                     display: block;
                     margin: 0 5px;
