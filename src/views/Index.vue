@@ -43,6 +43,8 @@
 
 <script>
 import { fabric } from "fabric";
+import initAligningGuidelines from '@/utils/AligningGuidelines'
+import initCenteringGuidelines from '@/utils/CenteringGuidelines'
 import echarts from 'echarts';
 import uuid from 'uuid-random';
 import 'fabric-history';
@@ -191,6 +193,8 @@ export default {
         init:function(){
             let _this=this;
             _this.design =new fabric.Canvas('designCanvas',{backgroundColor:''});
+            initAligningGuidelines(_this.design);   //初始化辅助线
+            initCenteringGuidelines(_this.design);
             let dom=document.getElementById("canvas-box");
             
             _this.design.setWidth(dom.offsetWidth);
