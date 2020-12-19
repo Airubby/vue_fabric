@@ -54,7 +54,7 @@ export default {
     methods:{
         init:function(){
             let _this=this;
-            _this.design =new fabric.Canvas('showCanvas',{backgroundColor:''});
+            _this.design =new fabric.Canvas('showCanvas',{backgroundColor:'',selection: false});
             _this.design.hoverCursor = 'default'; // 设置对象hover的光标为默认
             let dom=document.getElementById("canvas-box");
             

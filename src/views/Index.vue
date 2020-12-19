@@ -5,6 +5,13 @@
                 <img src="/images/logo.png">
             </div>
             <div class="btn">
+                
+                <el-tooltip class="item" content="多边形" placement="top-end">
+                    <span @click="drawPolygon"><i class="el-icon-share"></i></span>
+                </el-tooltip>
+                <el-tooltip class="item" content="测试" placement="top-end">
+                    <span @click="test"><i class="el-icon-picture-outline"></i></span>
+                </el-tooltip>
                 <el-tooltip class="item" content="更改图片" placement="top-end">
                     <span @click="changeImg"><i class="el-icon-picture-outline"></i></span>
                 </el-tooltip>
@@ -187,12 +194,35 @@ export default {
             zoom:1, //缩放比例
             viewportTransform:null, //拖动画布后，存的距离上左的间距arr[0]比率；arr[4]左右移动的距离；arr[5]上下移动距离
             design:"",
+
+            //绘制参数
+            drawType:"",  //绘制类型
+            drawWidth: 2, //笔触宽度
+            color: "#E34F51", //画笔颜色
+            drawingObject: null, //当前绘制对象
+            moveCount: 1, //绘制移动计数器
+            doDrawing: false, // 绘制状态
+            
+            mouseFrom: {},
+            mouseTo: {},
+            
+            polygonMode: false,
+            pointArray: [],
+            lineArray: [],
+            activeShape: false,
+            activeLine: "",
+            line: {},
        }
     },
     methods:{
         init:function(){
             let _this=this;
-            _this.design =new fabric.Canvas('designCanvas',{backgroundColor:''});
+            _this.design =new fabric.Canvas('designCanvas',{
+                backgroundColor:'',
+                // skipTargetFind: false, //当为真时，跳过目标检测。目标检测将返回始终未定义。点击选择将无效
+                // selectable: false,  //为false时，不能选择对象进行修改
+                // selection: false   // 是否可以多个对象为一组
+            });
             initAligningGuidelines(_this.design);   //初始化辅助线
             initCenteringGuidelines(_this.design);
             let dom=document.getElementById("canvas-box");
@@ -249,6 +279,7 @@ export default {
                 _this.viewportTransform=this.viewportTransform;
             });
             _this.design.on('mouse:down', function(opt) {
+                console.log(this)
                 var evt = opt.e;
                 if (evt.altKey === true) {
                     this.isDragging = true;
@@ -256,10 +287,35 @@ export default {
                     this.lastPosX = evt.clientX;
                     this.lastPosY = evt.clientY;
                 }
+                //绘制
+                // 记录鼠标按下时的坐标
+                var xy = opt.pointer || _this.transformMouse(evt.offsetX, evt.offsetY);
+                _this.mouseFrom.x = xy.x;
+                _this.mouseFrom.y = xy.y;
+                _this.doDrawing = true;
+                // 绘制多边形
+                if (_this.drawType == "polygon") {
+                    _this.design.skipTargetFind = false;
+                    try {
+                        // 此段为判断是否闭合多边形，点击红点时闭合多边形
+                        if (_this.pointArray.length > 1) {
+                            // opt.target.id == this.pointArray[0].id 表示点击了初始红点
+                            if (opt.target && opt.target.id == _this.pointArray[0].id) {
+                                _this.generatePolygon();
+                            }
+                        }
+                        //未点击红点则继续作画
+                        if (_this.polygonMode) {
+                            _this.addPoint(opt);
+                        }
+                    } catch (error) {
+                        console.log(error);
+                    }
+                }
             });
             _this.design.on('mouse:move', function(opt) {
+                var e = opt.e;
                 if (this.isDragging) {
-                    var e = opt.e;
                     var vpt = this.viewportTransform;
                     vpt[4] += e.clientX - this.lastPosX;
                     vpt[5] += e.clientY - this.lastPosY;
@@ -268,10 +324,47 @@ export default {
                     this.lastPosY = e.clientY;
                     _this.viewportTransform=this.viewportTransform;
                 }
+                //绘制
+                if (_this.moveCount % 2 && !_this.doDrawing) {
+                    //减少绘制频率
+                    return;
+                }
+                _this.moveCount++;
+                var xy = opt.pointer || _this.transformMouse(e.offsetX, e.offsetY);
+                _this.mouseTo.x = xy.x;
+                _this.mouseTo.y = xy.y;
+                
+                if (_this.drawType == "polygon") {
+                    if (_this.activeLine && _this.activeLine.class == "line") {
+                        var pointer = _this.design.getPointer(e);
+                        _this.activeLine.set({ x2: pointer.x, y2: pointer.y });
+
+                        var points = _this.activeShape.get("points");
+                        points[_this.pointArray.length] = {
+                            x: pointer.x,
+                            y: pointer.y,
+                            zIndex: 1
+                        };
+                        _this.activeShape.set({
+                            points: points
+                        });
+                        _this.design.renderAll();
+                    }
+                    _this.design.renderAll();
+                }
             });
             _this.design.on('mouse:up', function(opt) {
+                var e=opt.e;
                 this.isDragging = false;
                 this.selection = true;
+
+                var xy = opt.pointer || _this.transformMouse(e.offsetX, e.offsetY);
+                _this.mouseTo.x = xy.x;
+                _this.mouseTo.y = xy.y;
+                _this.drawingObject = null;
+                _this.moveCount = 1;
+
+                
             });
             _this.design.on('object:move',function(opt){
                 _this.$confirm("确定删除？","提示",{
@@ -288,6 +381,9 @@ export default {
                 })
             });
             
+        },
+        transformMouse(mouseX, mouseY) {
+            return { x: mouseX / 1, y: mouseY / 1 };
         },
         //拖拽
         drag:function(ev,item){
@@ -486,8 +582,149 @@ export default {
         //查看
         showDesign:function(){
             this.$router.push({path:'/show'});
-        }
+        },
+        test:function(){
+            fabric.backgroundImage = 'https://source.unsplash.com/random'
+        },
+        //绘制多边形
+        drawPolygon:function(){
+            this.drawType = "polygon";
+            this.polygonMode = true;
+            //这里画的多边形，由顶点与线组成
+            this.pointArray = [];  // 顶点集合
+            this.lineArray = [];  //线集合
+            this.design.isDrawingMode = false;
+        },
+        generatePolygon() {
+            var points = [];
+            this.pointArray.map((point, index) => {
+                points.push({
+                    x: point.left,
+                    y: point.top
+                });
+                this.design.remove(point);
+            });
+            this.lineArray.map((line, index) => {
+                this.design.remove(line);
+            });
+            this.design.remove(this.activeShape).remove(this.activeLine);
+            var polygon = new fabric.Polygon(points, {
+                stroke: this.color,
+                strokeWidth: this.drawWidth,
+                fill: "rgba(255, 255, 255, 0)",
+                opacity: 1,
+                hasBorders: true,
+                hasControls: false
+            });
+            this.design.add(polygon);
+
+            this.activeLine = null;
+            this.activeShape = null;
+            this.polygonMode = false;
+            this.doDrawing = false;
+            this.drawType = null;
+        },
+        addPoint(e) {
+            // var random = Math.floor(Math.random() * 10000);
+            // var id = new Date().getTime() + random;
+            var id=uuid();
+            var circle = new fabric.Circle({
+                radius: 5,
+                fill: "#ffffff",
+                stroke: "#333333",
+                strokeWidth: 0.5,
+                left: (e.pointer.x || e.e.layerX) / this.design.getZoom(),
+                top: (e.pointer.y || e.e.layerY) / this.design.getZoom(),
+                selectable: false,
+                hasBorders: false,
+                hasControls: false,
+                originX: "center",
+                originY: "center",
+                id: id,
+                objectCaching: false
+            });
+            if (this.pointArray.length == 0) {
+                circle.set({
+                    fill: "red"
+                });
+            }
+            var points = [
+                (e.pointer.x || e.e.layerX) / this.design.getZoom(),
+                (e.pointer.y || e.e.layerY) / this.design.getZoom(),
+                (e.pointer.x || e.e.layerX) / this.design.getZoom(),
+                (e.pointer.y || e.e.layerY) / this.design.getZoom()
+            ];
+
+            this.line = new fabric.Line(points, {
+                strokeWidth: 2,
+                fill: "#999999",
+                stroke: "#999999",
+                class: "line",
+                originX: "center",
+                originY: "center",
+                selectable: false,
+                hasBorders: false,
+                hasControls: false,
+                evented: false,
+
+                objectCaching: false
+            });
+            if (this.activeShape) {
+                var pos = this.design.getPointer(e.e);
+                var points = this.activeShape.get("points");
+                points.push({
+                    x: pos.x,
+                    y: pos.y
+                });
+                var polygon = new fabric.Polygon(points, {
+                    stroke: "#333333",
+                    strokeWidth: 1,
+                    fill: "#cccccc",
+                    opacity: 0.3,
+
+                    selectable: false,
+                    hasBorders: false,
+                    hasControls: false,
+                    evented: false,
+                    objectCaching: false
+                });
+                this.design.remove(this.activeShape);
+                this.design.add(polygon);
+                this.activeShape = polygon;
+                this.design.renderAll();
+            } else {
+                var polyPoint = [{
+                    x: (e.pointer.x || e.e.layerX) / this.design.getZoom(),
+                    y: (e.pointer.y || e.e.layerY) / this.design.getZoom()
+                }];
+                var polygon = new fabric.Polygon(polyPoint, {
+                    stroke: "#333333",
+                    strokeWidth: 1,
+                    fill: "#cccccc",
+                    opacity: 0.3,
+
+                    selectable: false,
+                    hasBorders: false,
+                    hasControls: false,
+                    evented: false,
+                    objectCaching: false
+                });
+                this.activeShape = polygon;
+                this.design.add(polygon);
+            }
+            this.activeLine = this.line;
+
+            this.pointArray.push(circle);
+            this.lineArray.push(this.line);
+            this.design.add(this.line);
+            this.design.add(circle);
+        },
     },
+    watch:{
+        drawType() {
+            this.design.selection = !this.drawType;
+        },
+    }
 }
 </script>
 <style lang="less" scoped>
