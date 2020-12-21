@@ -6,8 +6,11 @@
             </div>
             <div class="btn">
                 
+                <el-tooltip class="item" content="线段" placement="top-end">
+                    <span @click="drawPolyLine('segments')"><i class="el-icon-share"></i></span>
+                </el-tooltip>
                 <el-tooltip class="item" content="多边形" placement="top-end">
-                    <span @click="drawPolygon"><i class="el-icon-share"></i></span>
+                    <span @click="drawPolyLine('polygon')"><i class="el-icon-share"></i></span>
                 </el-tooltip>
                 <el-tooltip class="item" content="测试" placement="top-end">
                     <span @click="test"><i class="el-icon-picture-outline"></i></span>
@@ -225,6 +228,7 @@ export default {
             });
             initAligningGuidelines(_this.design);   //初始化辅助线
             initCenteringGuidelines(_this.design);
+            fabric.Object.prototype.originX = fabric.Object.prototype.originY = 'center';
             let dom=document.getElementById("canvas-box");
             
             _this.design.setWidth(dom.offsetWidth);
@@ -294,14 +298,17 @@ export default {
                 _this.mouseFrom.y = xy.y;
                 _this.doDrawing = true;
                 // 绘制多边形
-                if (_this.drawType == "polygon") {
+                if (_this.drawType == "polygon"||_this.drawType == "segments") {
                     _this.design.skipTargetFind = false;
                     try {
                         // 此段为判断是否闭合多边形，点击红点时闭合多边形
                         if (_this.pointArray.length > 1) {
                             // opt.target.id == this.pointArray[0].id 表示点击了初始红点
-                            if (opt.target && opt.target.id == _this.pointArray[0].id) {
+                            if (_this.drawType == "polygon"&&opt.target && opt.target.id == _this.pointArray[0].id) {
                                 _this.generatePolygon();
+                            }
+                            if(_this.drawType == "segments"&&opt.target&&opt.target.id==_this.pointArray[_this.pointArray.length-1].id){
+                                _this.generateSegements();
                             }
                         }
                         //未点击红点则继续作画
@@ -325,7 +332,7 @@ export default {
                     _this.viewportTransform=this.viewportTransform;
                 }
                 //绘制
-                if (_this.moveCount % 2 && !_this.doDrawing) {
+                if (_this.moveCount % 3 && !_this.doDrawing) {
                     //减少绘制频率
                     return;
                 }
@@ -334,21 +341,23 @@ export default {
                 _this.mouseTo.x = xy.x;
                 _this.mouseTo.y = xy.y;
                 
-                if (_this.drawType == "polygon") {
+                if (_this.drawType == "polygon"||_this.drawType == "segments") {
                     if (_this.activeLine && _this.activeLine.class == "line") {
                         var pointer = _this.design.getPointer(e);
                         _this.activeLine.set({ x2: pointer.x, y2: pointer.y });
-
-                        var points = _this.activeShape.get("points");
-                        points[_this.pointArray.length] = {
-                            x: pointer.x,
-                            y: pointer.y,
-                            zIndex: 1
-                        };
-                        _this.activeShape.set({
-                            points: points
-                        });
-                        _this.design.renderAll();
+                        if(_this.drawType == "polygon"){
+                            var points = _this.activeShape.get("points");
+                            points[_this.pointArray.length] = {
+                                x: pointer.x,
+                                y: pointer.y,
+                                zIndex: 1
+                            };
+                            _this.activeShape.set({
+                                points: points
+                            });
+                        }
+                        
+                        // _this.design.renderAll();
                     }
                     _this.design.renderAll();
                 }
@@ -358,27 +367,24 @@ export default {
                 this.isDragging = false;
                 this.selection = true;
 
-                var xy = opt.pointer || _this.transformMouse(e.offsetX, e.offsetY);
-                _this.mouseTo.x = xy.x;
-                _this.mouseTo.y = xy.y;
-                _this.drawingObject = null;
-                _this.moveCount = 1;
+                if(_this.drawType == "polygon"||_this.drawType == "segments"){
+                    var xy = opt.pointer || _this.transformMouse(e.offsetX, e.offsetY);
+                    _this.mouseTo.x = xy.x;
+                    _this.mouseTo.y = xy.y;
+                    _this.drawingObject = null;
+                    _this.moveCount = 1;
+                }
+                
 
                 
             });
             _this.design.on('object:move',function(opt){
-                _this.$confirm("确定删除？","提示",{
-                    confirmButtonText:"确定",
-                    cancelButtonText:"取消",
-                    type:"warning"
-                }).then(()=>{
-                    _this.design.remove(
-                        _this.design.item(
-                            _this.design.getObjects().indexOf(opt.target)
-                        )
-                    )
-
-                })
+                var p = opt.target;
+                // p.startLine && p.startLine.set({ 'x2': p.left, 'y2': p.top });
+                // p.endLine && p.endLine.set({ 'x1': p.left, 'y1': p.top });
+                p.line1 && p.line1.set({ 'x2': p.left, 'y2': p.top });
+                p.line2 && p.line2.set({ 'x1': p.left, 'y1': p.top });
+                _this.design.renderAll();
             });
             
         },
@@ -586,14 +592,21 @@ export default {
         test:function(){
             fabric.backgroundImage = 'https://source.unsplash.com/random'
         },
+
         //绘制多边形
-        drawPolygon:function(){
-            this.drawType = "polygon";
+        drawPolyLine:function(type){
+            this.drawType = type;
             this.polygonMode = true;
-            //这里画的多边形，由顶点与线组成
             this.pointArray = [];  // 顶点集合
             this.lineArray = [];  //线集合
             this.design.isDrawingMode = false;
+        },
+        finishPolyLine:function(){
+            this.activeLine = null;
+            this.activeShape = null;
+            this.polygonMode = false;
+            this.doDrawing = false;
+            this.drawType = null;
         },
         generatePolygon() {
             var points = [];
@@ -618,11 +631,58 @@ export default {
             });
             this.design.add(polygon);
 
-            this.activeLine = null;
-            this.activeShape = null;
-            this.polygonMode = false;
-            this.doDrawing = false;
-            this.drawType = null;
+            this.finishPolyLine();
+            
+        },
+        generateSegements(){
+            this.design.remove(this.lineArray[this.lineArray.length-1]);
+            this.lineArray.splice(this.lineArray.length-1,1);
+        
+            // for(let i=0;i<this.pointArray.length;i++){
+            //     if(i==0){
+            //         this.pointArray[i].startLine=null;
+            //         this.pointArray[i].endLine=this.lineArray[0];
+            //     }else{
+            //         if(i==this.lineArray.length){
+            //             this.pointArray[i].startLine=this.lineArray[i-1];
+            //             this.pointArray[i].endLine=null;
+            //         }else{
+            //             this.pointArray[i].startLine=this.lineArray[i-1];
+            //             this.pointArray[i].endLine=this.lineArray[i];
+            //         }
+            //     }
+            // }
+
+
+            // for(let i=0;i<this.pointArray.length;i++){
+            //     if(i==0){
+            //         this.design.add(this.makeCircle(this.lineArray[i].get('x1'),this.lineArray[i].get('y1'),null,this.lineArray[i]));
+            //     }else{
+            //         if(i==this.lineArray.length){
+            //             this.design.add(this.makeCircle(this.lineArray[i-1].get('x2'),this.lineArray[i-1].get('y2'),this.lineArray[i-1],null));
+            //         }else{
+            //             this.design.add(this.makeCircle(this.lineArray[i-1].get('x2'),this.lineArray[i-1].get('y2'),this.lineArray[i-1],this.lineArray[i]));
+            //         }
+            //     }
+            // }
+
+            this.finishPolyLine();
+        },
+        makeCircle:function(left, top, line1, line2){
+            var c = new fabric.Circle({
+                left: left,
+                top: top,
+                radius: 5,
+                fill: "#ffffff",
+                stroke: "#333333",
+                strokeWidth: 0.5,
+            });
+            c.hasControls = c.hasBorders = false;
+
+            c.startLine = line1;
+            c.endLine = line2;
+
+            return c;
         },
         addPoint(e) {
             // var random = Math.floor(Math.random() * 10000);
@@ -635,7 +695,7 @@ export default {
                 strokeWidth: 0.5,
                 left: (e.pointer.x || e.e.layerX) / this.design.getZoom(),
                 top: (e.pointer.y || e.e.layerY) / this.design.getZoom(),
-                selectable: false,
+                // selectable: false,
                 hasBorders: false,
                 hasControls: false,
                 originX: "center",
@@ -643,11 +703,6 @@ export default {
                 id: id,
                 objectCaching: false
             });
-            if (this.pointArray.length == 0) {
-                circle.set({
-                    fill: "red"
-                });
-            }
             var points = [
                 (e.pointer.x || e.e.layerX) / this.design.getZoom(),
                 (e.pointer.y || e.e.layerY) / this.design.getZoom(),
@@ -663,55 +718,58 @@ export default {
                 originX: "center",
                 originY: "center",
                 selectable: false,
-                hasBorders: false,
-                hasControls: false,
+                // hasBorders: false,
+                // hasControls: false,
                 evented: false,
 
                 objectCaching: false
             });
-            if (this.activeShape) {
-                var pos = this.design.getPointer(e.e);
-                var points = this.activeShape.get("points");
-                points.push({
-                    x: pos.x,
-                    y: pos.y
-                });
-                var polygon = new fabric.Polygon(points, {
-                    stroke: "#333333",
-                    strokeWidth: 1,
-                    fill: "#cccccc",
-                    opacity: 0.3,
+            if(this.drawType=="polygon"){
+                if (this.activeShape) {
+                    var pos = this.design.getPointer(e.e);
+                    var points = this.activeShape.get("points");
+                    points.push({
+                        x: pos.x,
+                        y: pos.y
+                    });
+                    var polygon = new fabric.Polygon(points, {
+                        stroke: "#333333",
+                        strokeWidth: 1,
+                        fill: "#cccccc",
+                        opacity: 0.3,
 
-                    selectable: false,
-                    hasBorders: false,
-                    hasControls: false,
-                    evented: false,
-                    objectCaching: false
-                });
-                this.design.remove(this.activeShape);
-                this.design.add(polygon);
-                this.activeShape = polygon;
-                this.design.renderAll();
-            } else {
-                var polyPoint = [{
-                    x: (e.pointer.x || e.e.layerX) / this.design.getZoom(),
-                    y: (e.pointer.y || e.e.layerY) / this.design.getZoom()
-                }];
-                var polygon = new fabric.Polygon(polyPoint, {
-                    stroke: "#333333",
-                    strokeWidth: 1,
-                    fill: "#cccccc",
-                    opacity: 0.3,
+                        selectable: false,
+                        hasBorders: false,
+                        hasControls: false,
+                        evented: false,
+                        objectCaching: false
+                    });
+                    this.design.remove(this.activeShape);
+                    this.design.add(polygon);
+                    this.activeShape = polygon;
+                    this.design.renderAll();
+                } else {
+                    var polyPoint = [{
+                        x: (e.pointer.x || e.e.layerX) / this.design.getZoom(),
+                        y: (e.pointer.y || e.e.layerY) / this.design.getZoom()
+                    }];
+                    var polygon = new fabric.Polygon(polyPoint, {
+                        stroke: "#333333",
+                        strokeWidth: 1,
+                        fill: "#cccccc",
+                        opacity: 0.3,
 
-                    selectable: false,
-                    hasBorders: false,
-                    hasControls: false,
-                    evented: false,
-                    objectCaching: false
-                });
-                this.activeShape = polygon;
-                this.design.add(polygon);
+                        selectable: false,
+                        hasBorders: false,
+                        hasControls: false,
+                        evented: false,
+                        objectCaching: false
+                    });
+                    this.activeShape = polygon;
+                    this.design.add(polygon);
+                }
             }
+            
             this.activeLine = this.line;
 
             this.pointArray.push(circle);

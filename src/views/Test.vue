@@ -20,7 +20,7 @@ export default {
     
   },
   mounted() {
-    var canvas  = new fabric.Canvas('c', { selection: true });
+    var canvas  = new fabric.Canvas('c', { selection: false });
     fabric.Object.prototype.originX = fabric.Object.prototype.originY = 'center';
     canvas.setWidth(1300);
     canvas.setHeight(600);
@@ -53,14 +53,23 @@ export default {
     }
 
     var line = makeLine([ 250, 125, 250, 175 ]),
-        line2 = makeLine([ 250, 175, 250, 250 ]);
+        line2 = makeLine([ 250, 175, 250, 250 ]),
+        line3 = makeLine([250,250,250,350]),
+        line4 = makeLine([250,350,250,450]),
+        
+        line5 = makeLine([ 550, 125, 550, 175 ]);
 
-    canvas.add(line, line2);
+    canvas.add(line, line2,line3,line4,line5);
 
     canvas.add(
         makeCircle(line.get('x1'), line.get('y1'), null, line),
         makeCircle(line.get('x2'), line.get('y2'), line, line2),
-        makeCircle(line2.get('x2'), line2.get('y2'), line2),
+        makeCircle(line2.get('x2'), line2.get('y2'), line2,line3),
+        makeCircle(line3.get('x2'), line3.get('y2'),line3,line4),
+        makeCircle(line4.get('x2'), line4.get('y2'),line4,null),
+
+        makeCircle(line5.get('x1'), line5.get('y1'), null, line5),
+        makeCircle(line5.get('x2'), line5.get('y2'),line5,null),
     );
 
     canvas.on('object:moving', function(e) {
