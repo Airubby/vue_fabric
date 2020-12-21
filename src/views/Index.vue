@@ -65,7 +65,6 @@ export default {
     mounted() {
         let _this=this;
         this.init();
-        console.log(fabric.util)
 
     },
     data() {
@@ -268,7 +267,6 @@ export default {
                     }
                 }
             }
-            
             _this.design.on('mouse:wheel', function(opt) {
                 console.log(this)
                 var delta = opt.e.deltaY;
@@ -378,12 +376,19 @@ export default {
 
                 
             });
-            _this.design.on('object:move',function(opt){
-                var p = opt.target;
-                // p.startLine && p.startLine.set({ 'x2': p.left, 'y2': p.top });
-                // p.endLine && p.endLine.set({ 'x1': p.left, 'y1': p.top });
-                p.line1 && p.line1.set({ 'x2': p.left, 'y2': p.top });
-                p.line2 && p.line2.set({ 'x1': p.left, 'y1': p.top });
+            _this.design.on('object:moving',function(opt){
+                // console.log(opt)
+                let target = opt.target;
+                let point = opt.target;
+                target.startLine && target.startLine.set({ 'x2': target.left, 'y2': target.top });
+                target.endLine && target.endLine.set({ 'x1': target.left, 'y1': target.top });
+                if(point._objects){
+                    for(let i=0;i<point._objects.length;i++){
+                        target=point._objects[i];
+                        target.startLine && target.startLine.set({ 'x2': target.left, 'y2': target.top });
+                        target.endLine && target.endLine.set({ 'x1': target.left, 'y1': target.top });
+                    }
+                }
                 _this.design.renderAll();
             });
             
@@ -635,23 +640,24 @@ export default {
             
         },
         generateSegements(){
+            
             this.design.remove(this.lineArray[this.lineArray.length-1]);
             this.lineArray.splice(this.lineArray.length-1,1);
         
-            // for(let i=0;i<this.pointArray.length;i++){
-            //     if(i==0){
-            //         this.pointArray[i].startLine=null;
-            //         this.pointArray[i].endLine=this.lineArray[0];
-            //     }else{
-            //         if(i==this.lineArray.length){
-            //             this.pointArray[i].startLine=this.lineArray[i-1];
-            //             this.pointArray[i].endLine=null;
-            //         }else{
-            //             this.pointArray[i].startLine=this.lineArray[i-1];
-            //             this.pointArray[i].endLine=this.lineArray[i];
-            //         }
-            //     }
-            // }
+            for(let i=0;i<this.pointArray.length;i++){
+                if(i==0){
+                    this.pointArray[i].startLine=null;
+                    this.pointArray[i].endLine=this.lineArray[0];
+                }else{
+                    if(i==this.lineArray.length){
+                        this.pointArray[i].startLine=this.lineArray[i-1];
+                        this.pointArray[i].endLine=null;
+                    }else{
+                        this.pointArray[i].startLine=this.lineArray[i-1];
+                        this.pointArray[i].endLine=this.lineArray[i];
+                    }
+                }
+            }
 
 
             // for(let i=0;i<this.pointArray.length;i++){
