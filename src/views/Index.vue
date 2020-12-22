@@ -47,18 +47,28 @@
                 <canvas id="designCanvas"></canvas>
             </div>
         </div>
+        <context-menu
+            :target="contextMenuTarget" 
+            :show="contextMenuVisible" 
+            @update:show="(show) => contextMenuVisible = contextMenuObjHover?show:contextMenuObjHover">
+            <a href="javascript:;" @click="test">复制</a>
+            <a href="javascript:;" @click="test">引用</a>
+            <a href="javascript:;" @click="test">删除</a>
+        </context-menu>
     </div>
 </template>
 
 
 <script>
 import { fabric } from "fabric";
-import initAligningGuidelines from '@/utils/AligningGuidelines'
-import initCenteringGuidelines from '@/utils/CenteringGuidelines'
+import initAligningGuidelines from '@/utils/AligningGuidelines';
+import initCenteringGuidelines from '@/utils/CenteringGuidelines';
+import ContextMenu from './ContextMenu';
 import echarts from 'echarts';
 import uuid from 'uuid-random';
 import 'fabric-history';
 export default {
+    components:{ContextMenu},
     created () {
 
     },
@@ -69,6 +79,9 @@ export default {
     },
     data() {
        return {
+            contextMenuTarget:null,
+            contextMenuVisible:false,
+            contextMenuObjHover:false, //是否移到对象上了
             activeItem: 'second',
             List:[
                 {
@@ -229,6 +242,7 @@ export default {
             initCenteringGuidelines(_this.design);
             fabric.Object.prototype.originX = fabric.Object.prototype.originY = 'center';
             let dom=document.getElementById("canvas-box");
+            this.contextMenuTarget=dom;
             
             _this.design.setWidth(dom.offsetWidth);
             _this.design.setHeight(dom.offsetHeight);
@@ -377,7 +391,7 @@ export default {
                 
             });
             _this.design.on('object:moving',function(opt){
-                // console.log(opt)
+                console.log(opt)
                 let target = opt.target;
                 let point = opt.target;
                 target.startLine && target.startLine.set({ 'x2': target.left, 'y2': target.top });
@@ -385,12 +399,23 @@ export default {
                 if(point._objects){
                     for(let i=0;i<point._objects.length;i++){
                         target=point._objects[i];
-                        target.startLine && target.startLine.set({ 'x2': target.left, 'y2': target.top });
-                        target.endLine && target.endLine.set({ 'x1': target.left, 'y1': target.top });
+                        let left=point.left+target.left;
+                        let top=point.top+target.top;
+                        target.startLine && target.startLine.set({ 'x2': left, 'y2': top });
+                        target.endLine && target.endLine.set({ 'x1': left, 'y1': top });
                     }
                 }
                 _this.design.renderAll();
             });
+            _this.design.on('mouse:over', function(opt) {
+                if(opt.target){
+                    _this.contextMenuObjHover=true;
+                }
+            });
+            _this.design.on('mouse:out', function(opt) {
+                _this.contextMenuObjHover=false;
+            });
+
             
         },
         transformMouse(mouseX, mouseY) {
