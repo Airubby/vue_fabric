@@ -50,10 +50,8 @@
         <context-menu
             :target="contextMenuTarget" 
             :show="contextMenuVisible" 
+            @handleLayer="handleLayer" 
             @update:show="(show) => contextMenuVisible = contextMenuObjHover?show:contextMenuObjHover">
-            <a href="javascript:;" @click="test">复制</a>
-            <a href="javascript:;" @click="test">引用</a>
-            <a href="javascript:;" @click="test">删除</a>
         </context-menu>
     </div>
 </template>
@@ -209,6 +207,9 @@ export default {
             zoom:1, //缩放比例
             viewportTransform:null, //拖动画布后，存的距离上左的间距arr[0]比率；arr[4]左右移动的距离；arr[5]上下移动距离
             design:"",
+            ActiveObject:{},
+            ActiveGroup:[],
+
 
             //绘制参数
             drawType:"",  //绘制类型
@@ -295,7 +296,6 @@ export default {
                 _this.viewportTransform=this.viewportTransform;
             });
             _this.design.on('mouse:down', function(opt) {
-                console.log(this)
                 var evt = opt.e;
                 if (evt.altKey === true) {
                     this.isDragging = true;
@@ -408,8 +408,16 @@ export default {
                 _this.design.renderAll();
             });
             _this.design.on('mouse:over', function(opt) {
+                
                 if(opt.target){
+                    console.log(opt)
                     _this.contextMenuObjHover=true;
+                    if(opt.target._objects){
+                        _this.ActiveGroup=opt.target._objects;
+                    }else{
+                        _this.ActiveObject=opt.target;
+                    }
+                    
                 }
             });
             _this.design.on('mouse:out', function(opt) {
@@ -596,6 +604,7 @@ export default {
         //删除对象
         removeObject:function(){
             if(this.design.getActiveObject()){
+                console.log(this.design.getActiveObject())
                 this.$confirm("确定删除？","提示",{
                     confirmButtonText:"确定",
                     cancelButtonText:"取消",
@@ -808,6 +817,48 @@ export default {
             this.design.add(this.line);
             this.design.add(circle);
         },
+        //操作图层
+        handleLayer:function(type){
+            console.log(type)
+            switch(type) {
+                case "upLayer":
+                    if(this.ActiveObject){
+                        this.ActiveObject.bringForward();
+                    }
+                    break;
+                case "downLayer":
+                    if(this.ActiveObject){
+                        this.ActiveObject.sendBackwards();
+                    }
+                    break;
+                case "topLayer":
+                    if(this.ActiveObject){
+                        this.ActiveObject.bringToFront();
+                    }
+                    break;
+                case "footLayer":
+                    if(this.ActiveObject){
+                        this.ActiveObject.sendToBack();
+                    }
+                    break;
+                case "removeLayer":
+                    if( this.ActiveObject ){
+                        this.$confirm("确定删除？","提示",{
+                            confirmButtonText:"确定",
+                            cancelButtonText:"取消",
+                            type:"warning"
+                        }).then(()=>{
+                            console.log(this.ActiveObject)
+                            this.design.remove(this.ActiveObject);
+                            this.ActiveObject = null;
+                        })
+                    }
+                    break;
+                default:
+                    
+            } 
+            this.contextMenuVisible=false;
+        }
     },
     watch:{
         drawType() {
