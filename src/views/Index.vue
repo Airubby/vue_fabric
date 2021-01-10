@@ -71,7 +71,6 @@ export default {
 
     },
     mounted() {
-        let _this=this;
         this.init();
 
     },
@@ -420,7 +419,7 @@ export default {
                     
                 }
             });
-            _this.design.on('mouse:out', function(opt) {
+            _this.design.on('mouse:out', function() {
                 _this.contextMenuObjHover=false;
             });
 
@@ -476,7 +475,6 @@ export default {
             }
         },
         addObject:function(object){
-            let _this=this;
             object.toObject = (function (toObject) {//赋值自定义属性
                 return function (properties) {
                     return fabric.util.object.extend(toObject.call(this, properties), {
@@ -649,14 +647,14 @@ export default {
         },
         generatePolygon() {
             var points = [];
-            this.pointArray.map((point, index) => {
+            this.pointArray.map((point) => {
                 points.push({
                     x: point.left,
                     y: point.top
                 });
                 this.design.remove(point);
             });
-            this.lineArray.map((line, index) => {
+            this.lineArray.map((line) => {
                 this.design.remove(line);
             });
             this.design.remove(this.activeShape).remove(this.activeLine);
@@ -767,12 +765,12 @@ export default {
             if(this.drawType=="polygon"){
                 if (this.activeShape) {
                     var pos = this.design.getPointer(e.e);
-                    var points = this.activeShape.get("points");
-                    points.push({
+                    var p = this.activeShape.get("points");
+                    p.push({
                         x: pos.x,
                         y: pos.y
                     });
-                    var polygon = new fabric.Polygon(points, {
+                    let polygon = new fabric.Polygon(points, {
                         stroke: "#333333",
                         strokeWidth: 1,
                         fill: "#cccccc",
@@ -793,7 +791,7 @@ export default {
                         x: (e.pointer.x || e.e.layerX) / this.design.getZoom(),
                         y: (e.pointer.y || e.e.layerY) / this.design.getZoom()
                     }];
-                    var polygon = new fabric.Polygon(polyPoint, {
+                    let polygon = new fabric.Polygon(polyPoint, {
                         stroke: "#333333",
                         strokeWidth: 1,
                         fill: "#cccccc",

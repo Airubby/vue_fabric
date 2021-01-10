@@ -13,18 +13,20 @@ var Ruler = /** @class */ (function () {
             color: '#000',
             background: '#fff',
             labelColor: '#345',
-            labelFontSize: 10,
+            labelFontSize: 12,
             labelFontFamily: 'Arial',
             lineWidth: 1,
-            scale: 1,
+            scale: 10,
             lastScale:1,
+            wheelScroll:100,
+            wheelUpNumber:1,
+            wheelDownNumber:1,
             labelScale: 1,
             canvas: document.createElement('canvas'),
             start: 0,
             beginOffset: 0,
             endOffset: 0,
             base: 10,
-            lastBase:10,
             originOffset: 0,
         };
         Object.assign(this.config, config);
@@ -62,47 +64,33 @@ var Ruler = /** @class */ (function () {
         if (config.width || config.height)
             this.resize();
         if (config.scale) {
-            console.log(config.scale,this.config.labelScale)
-            let sp=0.4;
-            if(config.scale<0.2&&scale<0.2){
-                sp=0.1;
+            // console.log(scale,config.scale)
+            if(scale==config.scale){
+                return;
             }
-            if(config.scale<0.1&&scale<0.1){
-                rate=100;
-            }
-            if(Math.abs(lastScale-config.scale)>sp){
-
-                if(scale>config.scale){
-                    this.config.base=this.config.base+rate;
+            if(scale>config.scale){ //缩小
+                console.log("!!!!!!!!!!!!!!!!!")
+                this.config.wheelScroll++;
+                if(this.config.wheelScroll%4==0){
+                    this.config.base=this.config.base+10*this.config.wheelDownNumber;
+                    this.render();
+                    this.config.wheelDownNumber++;
                 }else{
-                    this.config.base=this.config.base-rate;
+                    this.addAnimate({ type: 'scale', from: scale, to: config.scale });
                 }
-                this.render();
-                this.config.lastScale=config.scale;
-            }else{
-                this.addAnimate({ type: 'scale', from: scale, to: config.scale });
+            }else if(scale<config.scale){ //放大
+                this.config.wheelScroll--;
+                if(this.config.wheelScroll%4==0){
+                    if(this.config.wheelDownNumber>1){
+                        this.config.base=this.config.base-10*this.config.wheelDownNumber;
+                        this.config.wheelDownNumber--;
+                    }
+                    this.render();
+                }else{
+                    this.addAnimate({ type: 'scale', from: scale, to: config.scale });
+                }
+                
             }
-
-            // console.log(config.scale,this.config.base)
-            // let sp=0.4,rate=10;
-            // if(config.scale<0.2&&scale<0.2){
-            //     sp=0.02;
-            //     rate=20;
-            // }
-            // if(config.scale<0.1&&scale<0.1){
-            //     rate=100;
-            // }
-            // if(Math.abs(lastScale-config.scale)>sp){
-            //     if(scale>config.scale){
-            //         this.config.base=this.config.base+rate;
-            //     }else{
-            //         this.config.base=this.config.base-rate;
-            //     }
-            //     this.render();
-            //     this.config.lastScale=config.scale;
-            // }else{
-            //     this.addAnimate({ type: 'scale', from: scale, to: config.scale });
-            // }
         }else {
             this.render();
         }
@@ -168,10 +156,10 @@ var Ruler = /** @class */ (function () {
         var count = 0;
         // left
         while (cur > beginOffset) {
-            var from = [cur - lineWidth / 2, height];
+            let from = [cur - lineWidth / 2, height];
             // eslint-disable-next-line no-nested-ternary
-            var ty = count % 5 ? height / 2 : (count % 10 ? height / 3 : 0);
-            var to = [cur - lineWidth / 2, ty];
+            let ty = count % 5 ? height / 2 : (count % 10 ? height / 3 : 0);
+            let to = [cur - lineWidth / 2, ty];
             splitLine.push([from, to]);
             if (count % 5 === 0) {
                 LabelArr.push({
@@ -186,10 +174,10 @@ var Ruler = /** @class */ (function () {
         cur = ZeroPos + es;
         count = 1;
         while (cur < width - endOffset) {
-            var from = [cur - lineWidth / 2, height];
+            let from = [cur - lineWidth / 2, height];
             // eslint-disable-next-line no-nested-ternary
-            var ty = count % 5 ? height / 2 : (count % 10 ? height / 3 : 0);
-            var to = [cur - lineWidth / 2, ty];
+            let ty = count % 5 ? height / 2 : (count % 10 ? height / 3 : 0);
+            let to = [cur - lineWidth / 2, ty];
             splitLine.push([from, to]);
             if (count % 5 === 0) {
                 LabelArr.push({
