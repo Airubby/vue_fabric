@@ -83,26 +83,29 @@ export default {
             
         },
         mouseWheel:function(){
-            let _this=this;
-            clearTimeout(this.timer);
-            this.timer=null;
-            if(this.lastTime==null){
-                this.ruler.update({
-                    scale:this.zoom,
-                });
-            }else{
-                let lastTime=new Date();
-                if(lastTime.getTime()-this.lastTime.getTime()>500){ //时间超过了一秒
-                    this.ruler.update({
-                        scale:this.zoom,
-                    });
-                }else{
-                    this.timer=setTimeout(() => {
-                        _this.mouseWheel();
-                    }, 500);
-                }
-            }
-            this.lastTime=new Date();
+            this.ruler.update({
+                scale:this.zoom,
+            });
+            // let _this=this;
+            // clearTimeout(this.timer);
+            // this.timer=null;
+            // if(this.lastTime==null){
+            //     this.ruler.update({
+            //         scale:this.zoom,
+            //     });
+            // }else{
+            //     let lastTime=new Date();
+            //     if(lastTime.getTime()-this.lastTime.getTime()>500){ //时间超过了一秒
+            //         this.ruler.update({
+            //             scale:this.zoom,
+            //         });
+            //     }else{
+            //         this.timer=setTimeout(() => {
+            //             _this.mouseWheel();
+            //         }, 500);
+            //     }
+            // }
+            // this.lastTime=new Date();
         },
         transformMouse(mouseX, mouseY) {
             return { x: mouseX / 1, y: mouseY / 1 };

@@ -16,11 +16,14 @@ var Ruler = /** @class */ (function () {
             labelFontSize: 12,
             labelFontFamily: 'Arial',
             lineWidth: 1,
-            scale: 10,
+            scale: 1,
             lastScale:1,
             wheelScroll:100,
             wheelUpNumber:1,
             wheelDownNumber:1,
+            upArr:[],
+            downArr:[],
+            first:true,
             labelScale: 1,
             canvas: document.createElement('canvas'),
             start: 0,
@@ -64,32 +67,76 @@ var Ruler = /** @class */ (function () {
         if (config.width || config.height)
             this.resize();
         if (config.scale) {
-            // console.log(scale,config.scale)
+            console.log(scale,config.scale,this.config.wheelScroll,this.config.base,this.config.upArr,this.config.downArr)
             if(scale==config.scale){
                 return;
             }
             if(scale>config.scale){ //缩小
-                console.log("!!!!!!!!!!!!!!!!!")
-                this.config.wheelScroll++;
-                if(this.config.wheelScroll%4==0){
-                    this.config.base=this.config.base+10*this.config.wheelDownNumber;
-                    this.render();
-                    this.config.wheelDownNumber++;
-                }else{
-                    this.addAnimate({ type: 'scale', from: scale, to: config.scale });
+                if(this.config.first){
+                    this.config.wheelScroll--;
+                    this.config.downArr.push(10);
+                    this.config.first=false;
                 }
-            }else if(scale<config.scale){ //放大
-                this.config.wheelScroll--;
                 if(this.config.wheelScroll%4==0){
-                    if(this.config.wheelDownNumber>1){
-                        this.config.base=this.config.base-10*this.config.wheelDownNumber;
-                        this.config.wheelDownNumber--;
+                    if(this.config.upArr.length>0){
+                        this.config.base=this.config.upArr[this.config.upArr.length-1];
+                        this.config.upArr.splice(this.config.upArr.length-1,1);
+                    }else{
+                        this.config.base=this.config.base+10*this.config.wheelDownNumber;
+                        this.config.wheelDownNumber++;
+                        this.config.downArr.push(this.config.base);
                     }
                     this.render();
+                    // if(this.config.downArr.length==0&&this.config.upArr.length==0&&this.config.wheelScroll==100){ //初始化直接缩小
+                    //     this.addAnimate({ type: 'scale', from: scale, to: config.scale });
+                    // }else{
+                    //     if(this.config.upArr.length>0){
+                    //         this.config.base=this.config.upArr[this.config.upArr.length-1];
+                    //         this.config.upArr.splice(this.config.upArr.length-1,1);
+                    //     }else{
+                    //         this.config.base=this.config.base+10*this.config.wheelDownNumber;
+                    //         this.config.wheelDownNumber++;
+                    //         this.config.downArr.push(this.config.base);
+                    //     }
+                    //     this.render();
+                    // }
                 }else{
                     this.addAnimate({ type: 'scale', from: scale, to: config.scale });
                 }
-                
+                this.config.wheelScroll--;
+            }else if(scale<config.scale){ //放大
+                if(this.config.first){
+                    this.config.wheelScroll++
+                    this.config.upArr.push(10);
+                    this.config.first=false;
+                }
+                if(this.config.wheelScroll%4==0){
+                    if(this.config.downArr.length>0){
+                        this.config.base=this.config.downArr[this.config.downArr.length-1];
+                        this.config.downArr.splice(this.config.downArr.length-1,1);
+                    }else{
+                        this.config.base=this.config.base-0.1*this.config.wheelDownNumber;
+                        this.config.wheelDownNumber++;
+                        this.config.downArr.push(this.config.base);
+                    }
+                    this.render();
+                    // if(this.config.downArr.length==0&&this.config.upArr.length==0&&this.config.wheelScroll==100){ //初始化直接缩小
+                    //     this.addAnimate({ type: 'scale', from: scale, to: config.scale });
+                    // }else{
+                    //     if(this.config.downArr.length>0){
+                    //         this.config.base=this.config.downArr[this.config.downArr.length-1];
+                    //         this.config.downArr.splice(this.config.downArr.length-1,1);
+                    //     }else{
+                    //         this.config.base=this.config.base-0.1*this.config.wheelDownNumber;
+                    //         this.config.wheelDownNumber++;
+                    //         this.config.downArr.push(this.config.base);
+                    //     }
+                    //     this.render();
+                    // }
+                }else{
+                    this.addAnimate({ type: 'scale', from: scale, to: config.scale });
+                }
+                this.config.wheelScroll++;
             }
         }else {
             this.render();

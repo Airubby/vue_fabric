@@ -1,0 +1,26 @@
+[core]
+	symlinks = false
+	repositoryformatversion = 0
+	filemode = false
+	bare = true
+	logallrefupdates = false
+[gitblit]
+	description =
+	originRepository =
+	owner = admin
+	acceptNewPatchsets = true
+	acceptNewTickets = true
+	mergeTo = master
+	useIncrementalPushTags = false
+	allowForks = true
+	accessRestriction = PUSH
+	authorizationControl = NAMED
+	verifyCommitter = false
+	showRemoteBranches = false
+	isFrozen = false
+	skipSizeCalculation = false
+	skipSummaryMetrics = false
+	federationStrategy = FEDERATE_THIS
+	isFederated = false
+	gcThreshold =
+	gcPeriod = 0
